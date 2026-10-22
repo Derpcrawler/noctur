@@ -1,3 +1,9 @@
+## 1.1.2
+
+### Fixed
+
+- Windows: updating from inside the app installs the new version and opens Noctur again.
+
 ## 1.1.1
 
 ### Fixed
