@@ -229,7 +229,7 @@ async function resolveSidecar(binInfo) {
  * download the file to the extra dir
  */
 async function resolveResource(binInfo) {
-  const { file, downloadURL, needExecutable = false, sha256 } = binInfo
+  const { file, downloadURL, localFile, needExecutable = false, sha256 } = binInfo
 
   const resDir = path.join(cwd, 'extra', 'files')
   const targetPath = path.join(resDir, file)
@@ -239,7 +239,8 @@ async function resolveResource(binInfo) {
   }
 
   fs.mkdirSync(resDir, { recursive: true })
-  await downloadFile(downloadURL, targetPath)
+  if (localFile) fs.copyFileSync(localFile, targetPath)
+  else await downloadFile(downloadURL, targetPath)
 
   // Noctur: binaries that can run as root are pinned by hash. A moved tag stops the build.
   if (sha256) {
@@ -336,9 +337,13 @@ const resolveSparkleService = () => {
   if (!pinned[`${platform}-${arch}`]) {
     throw new Error(`sparkle-service: no pinned SHA-256 for ${platform}-${arch}; add one in scripts/prepare.mjs`)
   }
+  // NOCTUR_SPARKLE_SERVICE_DIR: a folder with the pinned builds under their release names, used
+  // instead of the download once the tag has moved on. The hash is checked the same way.
+  const localDir = process.env.NOCTUR_SPARKLE_SERVICE_DIR
   return resolveResource({
     file: `sparkle-service${ext}`,
     downloadURL: `https://github.com/xishang0128/sparkle-service/releases/download/pre-release/${base}${ext}`,
+    localFile: localDir && path.join(localDir, `${base}${ext}`),
     needExecutable: true,
     sha256: pinned[`${platform}-${arch}`]
   })
