@@ -229,7 +229,9 @@ function psQuote(s: string): string {
 export function winHelperScript(installer: string, appExe: string, pid: number): string {
   return [
     `Wait-Process -Id ${Math.trunc(pid)} -Timeout 60 -ErrorAction SilentlyContinue`,
-    `try { Start-Process -FilePath ${psQuote(installer)} -ArgumentList '/S','--updated','--force-run' -ErrorAction Stop }`,
-    `catch { Start-Process -FilePath ${psQuote(appExe)} }`
+    // try and catch stay one statement: a ";" between them is a parse error, and PowerShell then
+    // runs none of the script.
+    `try { Start-Process -FilePath ${psQuote(installer)} -ArgumentList '/S','--updated','--force-run' -ErrorAction Stop } ` +
+      `catch { Start-Process -FilePath ${psQuote(appExe)} }`
   ].join('; ')
 }
