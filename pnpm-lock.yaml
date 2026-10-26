@@ -18,10 +18,10 @@ importers:
     dependencies:
       '@electron-toolkit/preload':
         specifier: ^3.0.2
-        version: 3.0.2(electron@44.7.0)
+        version: 3.0.2(electron@44.9.3)
       '@electron-toolkit/utils':
         specifier: ^4.0.0
-        version: 4.0.0(electron@44.7.0)
+        version: 4.0.0(electron@44.9.3)
       '@fontsource-variable/jetbrains-mono':
         specifier: ^5.3.0
         version: 5.3.0
@@ -174,8 +174,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       electron:
-        specifier: ^44.7.0
-        version: 44.7.0
+        specifier: ^44.9.3
+        version: 44.9.3
       electron-builder:
         specifier: 26.8.1
         version: 26.8.1(electron-builder-squirrel-windows@26.8.1)
@@ -2687,8 +2687,8 @@ packages:
     resolution: {integrity: sha512-bO3y10YikuUwUuDUQRM4KfwNkKhnpVO7IPdbsrejwN9/AABJzzTQ4GeHwyzNSrVO+tEH3/Np255a3sVZpZDjvg==}
     engines: {node: '>=8.0.0'}
 
-  electron@44.7.0:
-    resolution: {integrity: sha512-aUq9/zLAAFYc+a9gy6cd0C3Y/N/RmovLCD8TV8LhIzNhuND6HEgsu96jJz9cbAxvckSPv+Trf2PKEjktoZgFkw==}
+  electron@44.9.3:
+    resolution: {integrity: sha512-Cv9/yMnZxNWsMlIe8T4v//NKHdUvbeyoTJoXE3BIcRxus2meeFaO9h/P3zB5d4cBXum51IgAYrT2QjpIDWKpJA==}
     engines: {node: '>= 22.12.0'}
     hasBin: true
 
@@ -5190,17 +5190,17 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@electron-toolkit/preload@3.0.2(electron@44.7.0)':
+  '@electron-toolkit/preload@3.0.2(electron@44.9.3)':
     dependencies:
-      electron: 44.7.0
+      electron: 44.9.3
 
   '@electron-toolkit/tsconfig@2.0.0(@types/node@24.10.13)':
     dependencies:
       '@types/node': 24.10.13
 
-  '@electron-toolkit/utils@4.0.0(electron@44.7.0)':
+  '@electron-toolkit/utils@4.0.0(electron@44.9.3)':
     dependencies:
-      electron: 44.7.0
+      electron: 44.9.3
 
   '@electron/asar@3.4.1':
     dependencies:
@@ -7559,7 +7559,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron@44.7.0:
+  electron@44.9.3:
     dependencies:
       '@electron-internal/extract-zip': 1.0.5
       '@electron/get': 5.1.0

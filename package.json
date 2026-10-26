@@ -76,7 +76,7 @@
     "@vitejs/plugin-react": "^5.1.4",
     "autoprefixer": "^10.5.0",
     "driver.js": "^1.4.0",
-    "electron": "^44.7.0",
+    "electron": "^44.9.3",
     "electron-builder": "26.8.1",
     "electron-vite": "^4.0.1",
     "electron-window-state": "^5.0.3",
