@@ -219,17 +219,14 @@ export async function triggerSysProxy(enable: boolean, onlyActiveDevice: boolean
 }
 
 export async function manualGrantCorePermition(
-  cores?: ('mihomo' | 'mihomo-alpha')[]
+  cores?: ('mihomo')[]
 ): Promise<void> {
   return ipcErrorWrapper(
     await window.electron.ipcRenderer.invoke('manualGrantCorePermition', cores)
   )
 }
 
-export async function checkCorePermission(): Promise<{
-  mihomo: boolean | 'partial'
-  'mihomo-alpha': boolean | 'partial'
-}> {
+export async function checkCorePermission(): Promise<{ mihomo: boolean | 'partial' }> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('checkCorePermission'))
 }
 
@@ -253,7 +250,7 @@ export async function deleteElevateTask(): Promise<void> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('deleteElevateTask'))
 }
 
-export async function revokeCorePermission(cores?: ('mihomo' | 'mihomo-alpha')[]): Promise<void> {
+export async function revokeCorePermission(cores?: ('mihomo')[]): Promise<void> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('revokeCorePermission', cores))
 }
 

@@ -2,7 +2,8 @@
 // a fake networksetup: Astra Clash (the app's previous name) is quit and removed before Noctur is
 // installed, through its own shutdown when it answers and by stopping it and turning off the system
 // proxy it set when it does not; an app with another bundle id at that path stays; cores downloaded
-// under the old name move to Noctur's folder, and a leftover old folder is removed.
+// under the old name move to Noctur's folder, and a leftover old folder is removed. An alpha core in
+// the installed bundle is removed.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ChildProcess, execSync, spawn, spawnSync } from 'child_process'
 import {
@@ -219,6 +220,17 @@ describe.skipIf(process.platform !== 'darwin')('macOS installer scripts', () => 
     oldAppBundle('com.example.other')
     run('preinstall', { NOCTUR_PKG_NETWORKSETUP: join(root, 'networksetup') })
     expect(existsSync(join(oldApp, 'Contents', 'Info.plist'))).toBe(true)
+  })
+
+  it('removes an alpha core left in the installed bundle, keeping the built-in core', () => {
+    const sidecar = join(root, 'Applications', 'Noctur.app', 'Contents', 'Resources', 'sidecar')
+    mkdirSync(sidecar, { recursive: true })
+    writeFileSync(join(sidecar, 'mihomo'), 'core')
+    writeFileSync(join(sidecar, 'mihomo-alpha'), 'alpha')
+    chmodSync(join(sidecar, 'mihomo-alpha'), 0o4755)
+    runStatus('postinstall')
+    expect(existsSync(join(sidecar, 'mihomo-alpha'))).toBe(false)
+    expect(readFileSync(join(sidecar, 'mihomo'), 'utf8')).toBe('core')
   })
 
   it('moves cores downloaded under the old name to Noctur, keeping their mode', () => {

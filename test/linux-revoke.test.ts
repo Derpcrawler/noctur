@@ -74,7 +74,7 @@ beforeEach(() => {
   vi.resetModules()
   Object.defineProperty(process, 'platform', { value: 'linux' })
   s.dir = mkdtempSync(join(tmpdir(), 'noctur-revoke-'))
-  for (const core of ['mihomo', 'mihomo-alpha']) writeFileSync(join(s.dir, core), '')
+  writeFileSync(join(s.dir, 'mihomo'), '')
   s.caps = {}
   s.calls = []
   s.removeWorks = true
@@ -114,8 +114,7 @@ describe('Linux core permission revoke', () => {
 
   it('shows an incomplete set as incomplete, not as unauthorized', async () => {
     s.caps[core('mihomo')] = 'cap_net_admin=ep'
-    s.caps[core('mihomo-alpha')] = 'cap_net_bind_service,cap_net_admin=ep'
     const { checkCorePermission } = await import('../src/main/core/manager')
-    expect(await checkCorePermission()).toEqual({ mihomo: 'partial', 'mihomo-alpha': true })
+    expect(await checkCorePermission()).toEqual({ mihomo: 'partial' })
   })
 })

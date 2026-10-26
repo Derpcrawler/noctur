@@ -42,6 +42,7 @@ export async function setupFirewall(): Promise<void> {
   const appName = app.getName()
   // Noctur: rules carry the app's name and only those are replaced. Upstream removed rules
   // named "mihomo", "mihomo-alpha", "Sparkle" and "Mihomo Party", which belong to other apps.
+  // The alpha core is not shipped; its rule is only removed.
   const coreRule = `${appName} mihomo`
   const alphaRule = `${appName} mihomo-alpha`
   const removeCommand = `
@@ -54,7 +55,6 @@ export async function setupFirewall(): Promise<void> {
   `
   const createCommand = `
   New-NetFirewallRule -DisplayName "${coreRule}" -Direction Inbound -Action Allow -Program "${mihomoCorePath('mihomo')}" -Enabled True -Profile Any -ErrorAction SilentlyContinue
-  New-NetFirewallRule -DisplayName "${alphaRule}" -Direction Inbound -Action Allow -Program "${mihomoCorePath('mihomo-alpha')}" -Enabled True -Profile Any -ErrorAction SilentlyContinue
   New-NetFirewallRule -DisplayName "${appName}" -Direction Inbound -Action Allow -Program "${exePath()}" -Enabled True -Profile Any -ErrorAction SilentlyContinue
   `
 

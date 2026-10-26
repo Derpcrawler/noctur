@@ -69,7 +69,7 @@ export function mihomoIpcPath(): string {
   if (core === 'system') {
     return '/tmp/noctur-mihomo-external.sock'
   }
-  if (!checkCorePermissionSync(core as 'mihomo' | 'mihomo-alpha')) {
+  if (!checkCorePermissionSync('mihomo')) {
     return '/tmp/noctur-mihomo-api-noperm.sock'
   }
   return '/tmp/noctur-mihomo-api.sock'
@@ -119,7 +119,7 @@ export function mihomoCorePath(core: string): string {
     const downloaded = downloadedCorePath()
     if (downloaded) return downloaded
   }
-  if (core === 'mihomo' || core === 'mihomo-alpha') {
+  if (core === 'mihomo') {
     const isWin = process.platform === 'win32'
     return path.join(mihomoCoreDir(), `${core}${isWin ? '.exe' : ''}`)
   }

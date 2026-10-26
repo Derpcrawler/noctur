@@ -163,7 +163,8 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
   try {
     corePath = mihomoCorePath(core)
   } catch (error) {
-    if (core === 'system') {
+    // Noctur: also a config that names the alpha core, which is not shipped.
+    if (core !== 'mihomo') {
       await patchAppConfig({ core: 'mihomo' })
       return startCore(detached)
     }
@@ -423,13 +424,13 @@ async function checkProfile(): Promise<void> {
 }
 
 export async function manualGrantCorePermition(
-  cores?: ('mihomo' | 'mihomo-alpha')[]
+  cores?: ('mihomo')[]
 ): Promise<void> {
   const execFilePromise = promisify(execFile)
 
   // Noctur: Linux grants file capabilities, not setuid root (noctur/core-caps.ts).
   if (process.platform === 'linux') {
-    const targets = (cores || ['mihomo', 'mihomo-alpha']).map((c) => mihomoCorePath(c))
+    const targets = (cores || ['mihomo']).map((c) => mihomoCorePath(c))
     try {
       await setCoreCaps(targets, true)
     } catch (error) {
@@ -439,7 +440,7 @@ export async function manualGrantCorePermition(
     return
   }
 
-  const grantPermission = async (coreName: 'mihomo' | 'mihomo-alpha'): Promise<void> => {
+  const grantPermission = async (coreName: 'mihomo'): Promise<void> => {
     const corePath = mihomoCorePath(coreName)
     try {
       if (process.platform === 'darwin') {
@@ -456,11 +457,11 @@ export async function manualGrantCorePermition(
     }
   }
 
-  const targetCores = cores || ['mihomo', 'mihomo-alpha']
+  const targetCores = cores || ['mihomo']
   await Promise.all(targetCores.map((core) => grantPermission(core)))
 }
 
-export function checkCorePermissionSync(coreName: 'mihomo' | 'mihomo-alpha'): boolean {
+export function checkCorePermissionSync(coreName: 'mihomo'): boolean {
   if (process.platform === 'win32') return true
   if (process.platform === 'linux') return hasCoreCapsSync(mihomoCorePath(coreName))
   try {
@@ -477,10 +478,10 @@ export function checkCorePermissionSync(coreName: 'mihomo' | 'mihomo-alpha'): bo
 // shows it so the rest can be removed or completed.
 type CorePermission = boolean | 'partial'
 
-export async function checkCorePermission(): Promise<{ mihomo: CorePermission; 'mihomo-alpha': CorePermission }> {
+export async function checkCorePermission(): Promise<{ mihomo: CorePermission }> {
   const execFilePromise = promisify(execFile)
 
-  const checkPermission = async (coreName: 'mihomo' | 'mihomo-alpha'): Promise<CorePermission> => {
+  const checkPermission = async (coreName: 'mihomo'): Promise<CorePermission> => {
     if (process.platform === 'linux') {
       const state = await readCapsState(mihomoCorePath(coreName)).catch(() => 'none' as const)
       return state === 'full' ? true : state === 'partial' ? 'partial' : false
@@ -495,25 +496,17 @@ export async function checkCorePermission(): Promise<{ mihomo: CorePermission; '
     }
   }
 
-  const [mihomoPermission, mihomoAlphaPermission] = await Promise.all([
-    checkPermission('mihomo'),
-    checkPermission('mihomo-alpha')
-  ])
-
-  return {
-    mihomo: mihomoPermission,
-    'mihomo-alpha': mihomoAlphaPermission
-  }
+  return { mihomo: await checkPermission('mihomo') }
 }
 
-export async function revokeCorePermission(cores?: ('mihomo' | 'mihomo-alpha')[]): Promise<void> {
+export async function revokeCorePermission(cores?: ('mihomo')[]): Promise<void> {
   const execFilePromise = promisify(execFile)
 
   // Noctur: Linux removes any file capability a core has, complete or not (noctur/core-caps.ts),
   // then checks that none is left. setcap -r fails on a file without capabilities, so only cores
   // that have some are passed; a core whose capabilities cannot be read stops the revoke.
   if (process.platform === 'linux') {
-    const paths = (cores || ['mihomo', 'mihomo-alpha']).map((c) => mihomoCorePath(c)).filter((p) => existsSync(p))
+    const paths = (cores || ['mihomo']).map((c) => mihomoCorePath(c)).filter((p) => existsSync(p))
     const withCaps: string[] = []
     for (const p of paths) if ((await readCapsState(p)) !== 'none') withCaps.push(p)
     try {
@@ -528,7 +521,7 @@ export async function revokeCorePermission(cores?: ('mihomo' | 'mihomo-alpha')[]
     return
   }
 
-  const revokePermission = async (coreName: 'mihomo' | 'mihomo-alpha'): Promise<void> => {
+  const revokePermission = async (coreName: 'mihomo'): Promise<void> => {
     const corePath = mihomoCorePath(coreName)
     try {
       if (process.platform === 'darwin') {
@@ -545,7 +538,7 @@ export async function revokeCorePermission(cores?: ('mihomo' | 'mihomo-alpha')[]
     }
   }
 
-  const targetCores = cores || ['mihomo', 'mihomo-alpha']
+  const targetCores = cores || ['mihomo']
   await Promise.all(targetCores.map((core) => revokePermission(core)))
 }
 

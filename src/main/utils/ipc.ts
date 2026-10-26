@@ -231,11 +231,11 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('triggerSysProxy', (_e, enable, onlyActiveDevice) =>
     ipcErrorWrapper(triggerSysProxy)(enable, onlyActiveDevice)
   )
-  ipcMain.handle('manualGrantCorePermition', (_e, cores?: ('mihomo' | 'mihomo-alpha')[]) =>
+  ipcMain.handle('manualGrantCorePermition', (_e, cores?: ('mihomo')[]) =>
     ipcErrorWrapper(manualGrantCorePermition)(cores)
   )
   ipcMain.handle('checkCorePermission', () => ipcErrorWrapper(checkCorePermission)())
-  ipcMain.handle('revokeCorePermission', (_e, cores?: ('mihomo' | 'mihomo-alpha')[]) =>
+  ipcMain.handle('revokeCorePermission', (_e, cores?: ('mihomo')[]) =>
     ipcErrorWrapper(revokeCorePermission)(cores)
   )
   ipcMain.handle('checkElevateTask', () => ipcErrorWrapper(checkElevateTask)())

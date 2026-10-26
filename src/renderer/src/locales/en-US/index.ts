@@ -441,7 +441,6 @@ export default {
       coreVersion: 'Core Version',
       upgradeCore: 'Upgrade core',
       builtinStable: 'Built-in Stable',
-      builtinPreview: 'Built-in Preview',
       useSystemCore: 'Use System Core',
       systemCorePath: 'System Core Path Selection',
       searchingCore: 'Searching for system core...',

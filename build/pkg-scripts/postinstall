@@ -14,11 +14,11 @@ if [ -d "$WRONG_PATH" ] && [ ! -d "$CORRECT_PATH" ]; then
     rm -rf "$ROOT/Applications/${APP_NAME}.localized"
 fi
 
-# --- Set suid on mihomo binaries ---
+# --- Set suid on the mihomo binary ---
 chown root:admin "$CORRECT_PATH/Contents/Resources/sidecar/mihomo"
-chown root:admin "$CORRECT_PATH/Contents/Resources/sidecar/mihomo-alpha"
 chmod +s "$CORRECT_PATH/Contents/Resources/sidecar/mihomo"
-chmod +s "$CORRECT_PATH/Contents/Resources/sidecar/mihomo-alpha"
+# No alpha core is shipped; one found in the installed bundle is setuid root, so it is removed.
+rm -f "$CORRECT_PATH/Contents/Resources/sidecar/mihomo-alpha"
 
 # --- Cores downloaded in Settings under the previous name, Astra Clash ---
 # They move to Noctur's folder with their root ownership and setuid mode, so a downloaded core in

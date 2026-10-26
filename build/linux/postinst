@@ -25,7 +25,7 @@ fi
 # TUN mode: the core needs CAP_NET_ADMIN for the TUN device and routes and CAP_NET_BIND_SERVICE for
 # DNS on port 53. File capabilities give it only these; the core runs as the user, not as root.
 # The app can set or remove them later (Settings, Core).
-for core in mihomo mihomo-alpha; do
+for core in mihomo; do
     file='/opt/Noctur/resources/sidecar/'"$core"
     [ -f "$file" ] || continue
     chown root:root "$file"

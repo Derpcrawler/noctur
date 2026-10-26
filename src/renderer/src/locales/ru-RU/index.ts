@@ -443,7 +443,6 @@ export default {
       coreVersion: 'Версия ядра',
       upgradeCore: 'Обновить ядро',
       builtinStable: 'Встроенное стабильное',
-      builtinPreview: 'Встроенное предварительное',
       useSystemCore: 'Использовать системное ядро',
       systemCorePath: 'Путь к системному ядру',
       searchingCore: 'Поиск системного ядра...',

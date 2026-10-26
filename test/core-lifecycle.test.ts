@@ -2,7 +2,7 @@
 // mihomoHotReloadConfig run against a fake core process whose stdout the test writes. Startup
 // settles for a silent core, a spawn error and an exit. After each successful hot reload the window
 // is told to refresh groups and rules once that reload's providers have started, and a failed
-// reload announces nothing.
+// reload announces nothing. A config naming a core that is not shipped starts the built-in one.
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EventEmitter } from 'events'
 import { PassThrough } from 'stream'
@@ -96,7 +96,9 @@ vi.mock('../src/main/config', () => ({
   getAppConfig: async () => s.appConfig,
   getControledMihomoConfig: async () => ({ tun: { enable: false } }),
   getProfileConfig: async () => ({ current: 'p1' }),
-  patchAppConfig: async () => {},
+  patchAppConfig: async (patch: Record<string, unknown>) => {
+    Object.assign(s.appConfig, patch)
+  },
   patchControledMihomoConfig: async () => {}
 }))
 vi.mock('../src/main/core/factory', () => ({
@@ -106,7 +108,11 @@ vi.mock('../src/main/core/factory', () => ({
 vi.mock('../src/main/utils/dirs', () => ({
   dataDir: () => s.dir,
   logPath: () => join(s.dir, 'core.log'),
-  mihomoCorePath: () => '/usr/bin/true', // checkProfile runs it with -t
+  // checkProfile runs it with -t. Like the real one, it knows no core but the built-in one.
+  mihomoCorePath: (core: string) => {
+    if (core !== 'mihomo') throw new Error('error.corePathError')
+    return '/usr/bin/true'
+  },
   mihomoIpcPath: () => join(s.dir, 'api.sock'),
   mihomoProfileWorkDir: () => s.dir,
   mihomoTestDir: () => s.dir,
@@ -226,6 +232,16 @@ describe('startCore', () => {
     core.exitCode = 1
     core.emit('exit', 1, null)
     expect(await settled(start)).toBe('rejected')
+  })
+
+  it('starts the built-in core when the config names the alpha core', async () => {
+    s.appConfig = { core: 'mihomo-alpha' }
+    const start = manager.startCore()
+    ;(await spawned()).stdout.write(LISTEN + DEFAULT)
+    const [ready] = await start
+    expect(await settled(ready)).toBe('resolved')
+    expect(s.appConfig.core).toBe('mihomo')
+    s.appConfig = {}
   })
 
   it('becomes ready with controller and provider lines in one chunk', async () => {

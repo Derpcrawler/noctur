@@ -505,7 +505,6 @@ export default {
       coreVersion: '内核版本',
       upgradeCore: '升级内核',
       builtinStable: '内置稳定版',
-      builtinPreview: '内置预览版',
       useSystemCore: '使用系统内核',
       systemCorePath: '系统内核路径选择',
       searchingCore: '正在查找系统内核...',

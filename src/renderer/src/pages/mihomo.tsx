@@ -127,7 +127,7 @@ const Mihomo: React.FC = () => {
     }
   }
 
-  const handleCoreChange = async (newCore: 'mihomo' | 'mihomo-alpha' | 'system'): Promise<void> => {
+  const handleCoreChange = async (newCore: 'mihomo' | 'system'): Promise<void> => {
     if (newCore === 'system') {
       const paths = await getSystemCorePaths()
 
@@ -314,7 +314,7 @@ const Mihomo: React.FC = () => {
         <SettingItem
           title={t('pages.mihomo.coreVersion')}
           actions={
-            FORK.coreUpgrade && (core === 'mihomo' || core === 'mihomo-alpha') ? (
+            FORK.coreUpgrade && core === 'mihomo' ? (
               <Button
                 size="icon-sm"
                 title={t('pages.mihomo.upgradeCore')}
@@ -336,7 +336,7 @@ const Mihomo: React.FC = () => {
           <Select
             value={core}
             onValueChange={(value) =>
-              handleCoreChange(value as 'mihomo' | 'mihomo-alpha' | 'system')
+              handleCoreChange(value as 'mihomo' | 'system')
             }
           >
             <SelectTrigger size="sm" className="w-[300px]">
@@ -344,7 +344,6 @@ const Mihomo: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="mihomo">{t('pages.mihomo.builtinStable')}</SelectItem>
-              <SelectItem value="mihomo-alpha">{t('pages.mihomo.builtinPreview')}</SelectItem>
               <SelectItem value="system">{t('pages.mihomo.useSystemCore')}</SelectItem>
             </SelectContent>
           </Select>

@@ -30,10 +30,10 @@ interface Props {
 
 const PermissionModal: React.FC<Props> = (props) => {
   const { onChange, onRevoke, onGrant } = props
-  const [loading, setLoading] = useState<{ mihomo?: boolean; 'mihomo-alpha'?: boolean }>({})
+  const [loading, setLoading] = useState<{ mihomo?: boolean }>({})
   // Noctur: 'partial' (Linux) is some capability set without what TUN needs; it offers Revoke.
   const [hasPermission, setHasPermission] = useState<
-    { mihomo: boolean | 'partial'; 'mihomo-alpha': boolean | 'partial' } | boolean | null
+    { mihomo: boolean | 'partial' } | boolean | null
   >(null)
   const isWindows = platform === 'win32'
 
@@ -42,7 +42,7 @@ const PermissionModal: React.FC<Props> = (props) => {
       const result = isWindows ? await checkElevateTask() : await checkCorePermission()
       setHasPermission(result)
     } catch {
-      setHasPermission(isWindows ? false : { mihomo: false, 'mihomo-alpha': false })
+      setHasPermission(isWindows ? false : { mihomo: false })
     }
   }
 
@@ -51,7 +51,7 @@ const PermissionModal: React.FC<Props> = (props) => {
   }, [])
 
   const handleAction = async (action: () => Promise<void>): Promise<void> => {
-    setLoading({ mihomo: true, 'mihomo-alpha': true })
+    setLoading({ mihomo: true })
     try {
       await action()
       onChange(false)
@@ -73,7 +73,7 @@ const PermissionModal: React.FC<Props> = (props) => {
   }
 
   const handleCoreAction = async (
-    coreName: 'mihomo' | 'mihomo-alpha',
+    coreName: 'mihomo',
     isGrant: boolean
   ): Promise<void> => {
     setLoading({ ...loading, [coreName]: true })
@@ -101,7 +101,7 @@ const PermissionModal: React.FC<Props> = (props) => {
     }
   }
 
-  const getStatusText = (coreName: 'mihomo' | 'mihomo-alpha'): string => {
+  const getStatusText = (coreName: 'mihomo'): string => {
     if (hasPermission === null) return t('mihomo.permissionModal.checking')
     if (typeof hasPermission === 'boolean') {
       return hasPermission
@@ -114,7 +114,7 @@ const PermissionModal: React.FC<Props> = (props) => {
       : t('mihomo.permissionModal.unauthorized')
   }
 
-  const getStatusBadgeClass = (coreName: 'mihomo' | 'mihomo-alpha'): string => {
+  const getStatusBadgeClass = (coreName: 'mihomo'): string => {
     if (hasPermission === null) return 'bg-muted-foreground text-white animate-pulse'
     if (typeof hasPermission === 'boolean') {
       return hasPermission ? 'bg-success text-white' : 'bg-warning text-white'
@@ -223,45 +223,6 @@ const PermissionModal: React.FC<Props> = (props) => {
                           disabled={loading.mihomo}
                         >
                           {loading.mihomo && <Spinner className="mr-2 size-4" />}
-                          {t('mihomo.permissionModal.authorizeCore')}
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-none py-0 gap-0">
-                    <CardHeader className="px-4 pt-4 pb-0">
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-semibold text-base">
-                            {t('pages.mihomo.builtinPreview')}
-                          </h4>
-                        </div>
-                        <Badge className={`text-xs ${getStatusBadgeClass('mihomo-alpha')}`}>
-                          {getStatusText('mihomo-alpha')}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="px-4 pt-3 pb-4">
-                      {typeof hasPermission !== 'boolean' && hasPermission?.['mihomo-alpha'] ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full border-warning text-warning hover:bg-warning/10"
-                          onClick={() => handleCoreAction('mihomo-alpha', false)}
-                          disabled={loading['mihomo-alpha']}
-                        >
-                          {loading['mihomo-alpha'] && <Spinner className="mr-2 size-4" />}
-                          {t('mihomo.permissionModal.revokeAuthorization')}
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          className="w-full shadow-sm"
-                          onClick={() => handleCoreAction('mihomo-alpha', true)}
-                          disabled={loading['mihomo-alpha']}
-                        >
-                          {loading['mihomo-alpha'] && <Spinner className="mr-2 size-4" />}
                           {t('mihomo.permissionModal.authorizeCore')}
                         </Button>
                       )}
