@@ -679,6 +679,8 @@ export default {
       httpPort: 'HTTP Port',
       redirPort: 'Redir Port',
       tproxyPort: 'TProxy Port',
+      fromProfile: 'from subscription',
+      useProfilePort: 'Use the subscription port ({{port}})',
       allowLan: 'Allow LAN Connection',
       allowedIpRanges: 'Allowed IP Ranges',
       deniedIpRanges: 'Denied IP Ranges',

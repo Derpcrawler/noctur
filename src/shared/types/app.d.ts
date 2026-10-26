@@ -22,6 +22,8 @@ interface IHost {
 
 interface AppConfig {
   core: 'mihomo' | 'system'
+  // Noctur: ports the user set in Settings; the others follow the profile when it declares them
+  customPorts?: MihomoPortKey[]
   systemCorePath?: string
   corePermissionMode?: 'elevated' | 'service'
   elevationDeclined?: boolean

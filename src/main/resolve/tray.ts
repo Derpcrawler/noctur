@@ -36,6 +36,7 @@ import { is } from '@electron-toolkit/utils'
 import { join } from 'path'
 import { applyTheme } from './theme'
 import { t } from '../utils/i18n'
+import { getMixedPort } from '../core/factory'
 
 export let tray: Tray | null = null
 let customTrayWindow: BrowserWindow | null = null
@@ -425,7 +426,7 @@ ipcMain.on('customTray:close', () => {
 })
 
 export async function copyEnv(type: 'bash' | 'cmd' | 'powershell' | 'nushell'): Promise<void> {
-  const { 'mixed-port': mixedPort = 7897 } = await getControledMihomoConfig()
+  const mixedPort = await getMixedPort()
   const { sysProxy } = await getAppConfig()
   const { host, bypass = [] } = sysProxy
   switch (type) {

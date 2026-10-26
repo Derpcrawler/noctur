@@ -680,6 +680,8 @@ export default {
       httpPort: 'HTTP-порт',
       redirPort: 'Redir-порт',
       tproxyPort: 'Порт TProxy',
+      fromProfile: 'из подписки',
+      useProfilePort: 'Вернуть порт из подписки ({{port}})',
       allowLan: 'Разрешить подключения из локальной сети',
       allowedIpRanges: 'Разрешённые диапазоны IP',
       deniedIpRanges: 'Запрещённые диапазоны IP',

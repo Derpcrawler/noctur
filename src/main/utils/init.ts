@@ -38,6 +38,7 @@ import { startNetworkDetection } from '../core/manager'
 import { initResumeRecovery } from '../sys/resume'
 import { initKeyManager } from '../service/manager'
 import { migrateFromOldApp } from './migration'
+import { PORT_KEYS } from '../core/factory'
 
 async function initDirs(): Promise<void> {
   if (!existsSync(dataDir())) {
@@ -164,6 +165,15 @@ export async function migration(): Promise<void> {
   }
 
   const appConfigPatch: Partial<AppConfig> = {}
+
+  // Noctur: ports now follow the profile unless set in Settings. A port saved with a value other
+  // than the default was set by the user, so it stays theirs.
+  if (appConfig.customPorts === undefined) {
+    appConfigPatch.customPorts = PORT_KEYS.filter(
+      (key) =>
+        mihomoConfig[key] !== undefined && mihomoConfig[key] !== defaultControledMihomoConfig[key]
+    )
+  }
 
   for (const key in defaultConfig) {
     if (!(key in appConfig) && defaultConfig[key as keyof AppConfig] !== undefined) {

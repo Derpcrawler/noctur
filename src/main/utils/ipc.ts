@@ -80,6 +80,7 @@ import {
 import { findSystemMihomo } from './dirs'
 import {
   getRuntimeConfig,
+  getEffectivePorts,
   getRuntimeConfigStr,
   getRawProfileStr,
   getCurrentProfileStr
@@ -257,6 +258,7 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('getRawProfileStr', ipcErrorWrapper(getRawProfileStr))
   ipcMain.handle('getCurrentProfileStr', ipcErrorWrapper(getCurrentProfileStr))
   ipcMain.handle('getRuntimeConfig', ipcErrorWrapper(getRuntimeConfig))
+  ipcMain.handle('getEffectivePorts', ipcErrorWrapper(getEffectivePorts))
   ipcMain.handle('downloadAndInstallUpdate', (_e, version) =>
     ipcErrorWrapper(downloadAndInstallUpdate)(version)
   )

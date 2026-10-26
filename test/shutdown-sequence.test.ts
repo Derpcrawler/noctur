@@ -22,6 +22,7 @@ vi.mock('../src/main/config', () => ({
   getAppConfig: async () => s.config,
   getControledMihomoConfig: async () => ({ 'mixed-port': 7897 })
 }))
+vi.mock('../src/main/core/factory', () => ({ getMixedPort: async () => 7897 }))
 vi.mock('../src/main/utils/dirs', () => ({
   logPath: () => join(tmpdir(), 'noctur-shutdown-test.log'),
   servicePath: () => '/nonexistent'

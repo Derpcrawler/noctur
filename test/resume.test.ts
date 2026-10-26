@@ -16,6 +16,7 @@ vi.mock('../src/main/config', () => ({
   getAppConfig: async () => s.config,
   getControledMihomoConfig: async () => ({ tun: { enable: false }, 'mixed-port': 7897 })
 }))
+vi.mock('../src/main/core/factory', () => ({ getMixedPort: async () => 7897 }))
 vi.mock('../src/main/core/manager', () => ({
   hasCoreProcess: () => true,
   restartCore: async () => {

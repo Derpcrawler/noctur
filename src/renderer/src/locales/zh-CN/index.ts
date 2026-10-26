@@ -735,6 +735,8 @@ export default {
       httpPort: 'Http 端口',
       redirPort: 'Redir 端口',
       tproxyPort: 'TProxy 端口',
+      fromProfile: '来自订阅',
+      useProfilePort: '使用订阅中的端口（{{port}}）',
       allowLan: '允许局域网连接',
       allowedIpRanges: '允许连接的 IP 段',
       deniedIpRanges: '禁止连接的 IP 段',
