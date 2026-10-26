@@ -37,7 +37,7 @@ import {
 } from './mihomoApi'
 import { readFile, rm, writeFile } from 'fs/promises'
 import { promisify } from 'util'
-import { mainWindow, showError } from '..'
+import { mainWindow } from '..'
 import path from 'path'
 import os from 'os'
 import { createWriteStream, existsSync } from 'fs'
@@ -46,6 +46,7 @@ import { getAxios } from './mihomoApi'
 import { setSysDns } from '../service/api'
 import { DEFAULT_DNS_MODE, DnsDeps, defaultRun, pointDnsIntoTunnel, restoreDns } from '../noctur/system-dns'
 import { t } from '../utils/i18n'
+import { CoreMissingError, ProfileRejectedError, showCoreError } from '../noctur/core-errors'
 
 const ctlParam = process.platform === 'win32' ? '-ext-ctl-pipe' : '-ext-ctl-unix'
 
@@ -170,6 +171,8 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
     }
     throw error
   }
+  // Noctur: before the config check, which would otherwise fail with only a spawn error.
+  if (!existsSync(corePath)) throw new CoreMissingError(corePath)
 
   const { logLevel } = await generateProfile()
   await checkProfile()
@@ -249,7 +252,7 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
         const promises = await startCore()
         await Promise.all(promises)
       } catch (e) {
-        showError(t('tray.coreStartError'), `${e}`)
+        await showCoreError(t('tray.coreStartError'), e)
       }
     }
   })
@@ -369,7 +372,7 @@ export function restartCore(): Promise<void> {
     .catch((e) => {
       // A restart that meets an accepted quit, or is overtaken by a later one, simply ends.
       if (e instanceof ShutdownInProgress || e instanceof ProviderWaitCancelled) return
-      showError(t('tray.coreStartError'), `${e}`)
+      return showCoreError(t('tray.coreStartError'), e)
     })
 }
 
@@ -380,7 +383,7 @@ export async function keepCoreAlive(): Promise<void> {
       await writeFile(path.join(dataDir(), 'core.pid'), child.pid.toString())
     }
   } catch (e) {
-    showError(t('tray.coreStartError'), `${e}`)
+    await showCoreError(t('tray.coreStartError'), e)
   }
 }
 
@@ -416,7 +419,7 @@ async function checkProfile(): Promise<void> {
         .split('\n')
         .filter((line) => line.includes('level=error'))
         .map((line) => line.split('level=error')[1])
-      throw new Error(`Profile Check Failed:\n${errorLines.join('\n')}`)
+      throw new ProfileRejectedError(errorLines.join('\n'))
     } else {
       throw error
     }

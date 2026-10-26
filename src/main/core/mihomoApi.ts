@@ -10,6 +10,7 @@ import { floatingWindow } from '../resolve/floatingWindow'
 import { mihomoIpcPath } from '../utils/dirs'
 import { safeSend } from '../utils/safeSend'
 import { debounce } from '../utils/debounce'
+import { ProfileRejectedError } from '../noctur/core-errors'
 
 let axiosIns: AxiosInstance = null!
 let mihomoTrafficWs: WebSocket | null = null
@@ -305,6 +306,14 @@ export const mihomoUpgradeUI = async (): Promise<void> => {
   return await instance.post('/upgrade/ui')
 }
 
+// Error bodies the controller answers with, as opposed to transport failures (axios rejects with
+// the response body, see getAxios).
+const isControllerError = (e: unknown): e is { message: string } =>
+  typeof e === 'object' &&
+  e !== null &&
+  !(e instanceof Error) &&
+  typeof (e as { message?: unknown }).message === 'string'
+
 export const mihomoHotReloadConfig = async (): Promise<void> => {
   const { generateProfile } = await import('./factory')
   const { getProfileConfig } = await import('../config')
@@ -323,6 +332,8 @@ export const mihomoHotReloadConfig = async (): Promise<void> => {
     await instance.put('/configs?force=true', { path: configPath })
   } catch (e) {
     wait.cancel()
+    // The controller answers a config it refuses with an error body and keeps the previous config.
+    if (isControllerError(e)) throw new ProfileRejectedError(e.message)
     throw e
   }
   announceReload(wait)

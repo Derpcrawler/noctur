@@ -104,6 +104,7 @@ import {
   showMainWindow,
   triggerMainWindow
 } from '..'
+import { takePendingErrors } from '../noctur/pending-errors'
 import {
   applyTheme,
   fetchThemes,
@@ -190,6 +191,7 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('mihomoUpgradeUI', ipcErrorWrapper(mihomoUpgradeUI))
   ipcMain.handle('mihomoUpgrade', ipcErrorWrapper(mihomoUpgrade))
   ipcMain.handle('mihomoHotReloadConfig', ipcErrorWrapper(mihomoHotReloadConfig))
+  ipcMain.handle('takePendingErrors', () => takePendingErrors())
   ipcMain.handle('mihomoProxyDelay', (_e, proxy, url, provider) =>
     ipcErrorWrapper(mihomoProxyDelay)(proxy, url, provider)
   )

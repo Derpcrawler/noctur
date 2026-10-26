@@ -1,5 +1,6 @@
 import React, { createContext, useContext, ReactNode, useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
+import { profileErrorToast } from '@renderer/noctur/error-toast'
 import useSWR from 'swr'
 import {
   getProfileConfig,
@@ -41,6 +42,9 @@ export const ProfileConfigProvider: React.FC<{ children: ReactNode }> = ({ child
 
   const clearHwidLimitError = useCallback(() => setHwidLimitError(null), [])
 
+  const profileItem = (id: string | undefined): ProfileItem | undefined =>
+    profileConfig?.items?.find((i) => i.id === id)
+
   const setProfileConfig = async (config: ProfileConfig): Promise<void> => {
     try {
       await set(config)
@@ -59,7 +63,7 @@ export const ProfileConfigProvider: React.FC<{ children: ReactNode }> = ({ child
       if (`${e}`.includes('HWID_LIMIT')) {
         setHwidLimitErrorFromMessage(`${e}`)
       } else {
-        toast.error(`${e}`)
+        profileErrorToast(e, profileItem(item.id) ?? (item as ProfileItem))
       }
     } finally {
       mutateProfileConfig()
@@ -82,7 +86,7 @@ export const ProfileConfigProvider: React.FC<{ children: ReactNode }> = ({ child
     try {
       await update(item)
     } catch (e) {
-      toast.error(`${e}`)
+      profileErrorToast(e, item)
     } finally {
       mutateProfileConfig()
       window.electron.ipcRenderer.send('updateTrayMenu')
@@ -93,7 +97,7 @@ export const ProfileConfigProvider: React.FC<{ children: ReactNode }> = ({ child
     try {
       await change(id)
     } catch (e) {
-      toast.error(`${e}`)
+      profileErrorToast(e, profileItem(id))
     } finally {
       mutateProfileConfig()
       window.electron.ipcRenderer.send('updateTrayMenu')

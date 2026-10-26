@@ -9,6 +9,13 @@ function ipcErrorWrapper(response: any): any {
   }
 }
 
+// Noctur: errors raised in the main process before this window listened (main/noctur/pending-errors.ts).
+export async function takePendingErrors(): Promise<
+  { title: string; message: string; supportUrl?: string }[]
+> {
+  return window.electron.ipcRenderer.invoke('takePendingErrors')
+}
+
 export async function mihomoVersion(): Promise<ControllerVersion> {
   return ipcErrorWrapper(await window.electron.ipcRenderer.invoke('mihomoVersion'))
 }

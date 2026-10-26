@@ -2,7 +2,8 @@
 // mihomoHotReloadConfig run against a fake core process whose stdout the test writes. Startup
 // settles for a silent core, a spawn error and an exit. After each successful hot reload the window
 // is told to refresh groups and rules once that reload's providers have started, and a failed
-// reload announces nothing. A config naming a core that is not shipped starts the built-in one.
+// reload announces nothing. A config naming a core that is not shipped starts the built-in one. A
+// missing core file and a config the core refuses are reported as such.
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EventEmitter } from 'events'
 import { PassThrough } from 'stream'
@@ -44,6 +45,9 @@ const s = vi.hoisted(() => ({
   errors: [] as string[],
   puts: [] as string[],
   putFails: false,
+  // The controller's error body for a config it refuses (axios rejects with the response body).
+  putRefusal: null as null | { message: string },
+  corePath: '/usr/bin/true',
   holdPuts: false,
   heldPuts: [] as { resolve: () => void; reject: (e: Error) => void }[],
   apiUp: true,
@@ -111,7 +115,7 @@ vi.mock('../src/main/utils/dirs', () => ({
   // checkProfile runs it with -t. Like the real one, it knows no core but the built-in one.
   mihomoCorePath: (core: string) => {
     if (core !== 'mihomo') throw new Error('error.corePathError')
-    return '/usr/bin/true'
+    return s.corePath
   },
   mihomoIpcPath: () => join(s.dir, 'api.sock'),
   mihomoProfileWorkDir: () => s.dir,
@@ -151,6 +155,7 @@ vi.mock('axios', () => ({
           return {}
         }
         if (s.putFails) throw new Error('reload rejected')
+        if (s.putRefusal) throw s.putRefusal
         return {}
       },
       patch: async () => ({}),
@@ -195,6 +200,8 @@ beforeEach(async () => {
   s.sent = []
   s.puts = []
   s.putFails = false
+  s.putRefusal = null
+  s.corePath = '/usr/bin/true'
   s.holdPuts = false
   s.heldPuts = []
   s.apiUp = true
@@ -244,6 +251,11 @@ describe('startCore', () => {
     s.appConfig = {}
   })
 
+  it('reports a missing core file as missing, not as a failed config check', async () => {
+    s.corePath = join(s.dir, 'quarantined-mihomo')
+    await expect(manager.startCore()).rejects.toThrow(/tray\.coreMissing/)
+  })
+
   it('becomes ready with controller and provider lines in one chunk', async () => {
     const start = manager.startCore()
     ;(await spawned()).stdout.write(LISTEN + DEFAULT)
@@ -283,6 +295,12 @@ describe('hot reload', () => {
     core.stdout.write(provider('sub'))
     await sleep(20)
     expect([refreshes(), rulesRefreshes()]).toEqual([3, 3])
+  })
+
+  it('reports a config the core refuses as a refused profile', async () => {
+    await running()
+    s.putRefusal = { message: 'proxy group[0]: missing name' }
+    await expect(mihomoHotReloadConfig()).rejects.toThrow(/^Profile Check Failed:\nproxy group\[0\]: missing name$/)
   })
 
   it('announces nothing after a failed reload', async () => {

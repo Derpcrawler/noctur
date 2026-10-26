@@ -1,5 +1,4 @@
 import { FORK } from '@renderer/fork'
-import { toast } from 'sonner'
 import { useTheme } from 'next-themes'
 import React, { useEffect, useRef, useState } from 'react'
 import { NavigateFunction, useLocation, useNavigate, useRoutes } from 'react-router-dom'
@@ -12,7 +11,8 @@ import {
   declineElevation,
   needsFirstRunAdmin,
   restartAsAdmin,
-  setNativeTheme
+  setNativeTheme,
+  takePendingErrors
 } from '@renderer/utils/ipc'
 import { platform } from '@renderer/utils/init'
 import ConfirmModal from '@renderer/components/base/base-confirm'
@@ -22,6 +22,7 @@ import WindowControls from '@renderer/components/window-controls'
 import mapDark from '@renderer/assets/map_darktheme.svg'
 import mapLight from '@renderer/assets/map_lighttheme.svg'
 import Backdrop from '@renderer/noctur/backdrop'
+import { errorToast } from '@renderer/noctur/error-toast'
 import NocturSidebar from '@renderer/noctur/sidebar'
 import LookPicker from '@renderer/noctur/look-picker'
 import { applyPalette, DEFAULT_PALETTE, hasLight } from '@renderer/noctur/palettes'
@@ -125,10 +126,19 @@ const App: React.FC = () => {
     window.electron.ipcRenderer.on('show-quit-confirm', handleShowQuitConfirm)
     window.electron.ipcRenderer.on('show-profile-install-confirm', handleShowProfileInstallConfirm)
 
-    const handleShowError = (_event: unknown, title: string, message: string): void => {
-      toast.error(title, { description: message })
+    const handleShowError = (
+      _event: unknown,
+      title: string,
+      message: string,
+      supportUrl?: string
+    ): void => {
+      errorToast(title, message, supportUrl)
     }
     window.electron.ipcRenderer.on('showError', handleShowError)
+    // Errors from before this window listened, such as a failed first core start.
+    takePendingErrors().then((errors) => {
+      for (const e of errors) errorToast(e.title, e.message, e.supportUrl)
+    })
 
     const handleNeedsAdminSetup = (): void => {
       setShowAdminRequired(true)

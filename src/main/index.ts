@@ -40,6 +40,8 @@ import { getAppConfigSync } from './config/app'
 import { declineElevation, ELEVATION_DECLINED_ARG } from './utils/elevation'
 import { t } from './utils/i18n'
 import { isHttpUrl } from './utils/url'
+import { showCoreError } from './noctur/core-errors'
+import { deliverError, windowLoading } from './noctur/pending-errors'
 
 
 let quitTimeout: NodeJS.Timeout | null = null
@@ -54,9 +56,14 @@ export function setNeedsFirstRunAdmin(value: boolean): void {
  * Show error to the user via renderer toast notification.
  * Falls back to system dialog if the window is not available.
  */
-export function showError(title: string, message: string): void {
+// Noctur: supportUrl adds the subscription's support link to the error (noctur/core-errors.ts).
+// Errors raised before the window listens are kept until it asks (noctur/pending-errors.ts).
+export function showError(title: string, message: string, supportUrl?: string): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('showError', title, message)
+    const window = mainWindow
+    deliverError({ title, message, supportUrl }, (e) =>
+      window.webContents.send('showError', e.title, e.message, e.supportUrl)
+    )
   } else {
     dialog.showErrorBox(title, message)
   }
@@ -361,7 +368,7 @@ app.whenReady().then(async () => {
       )
       coreStarted = true
     } catch (e) {
-      showError(t('dialog.coreStartError'), `${e}`)
+      await showCoreError(t('dialog.coreStartError'), e)
     }
   })()
 
@@ -632,6 +639,9 @@ export async function createWindow(appConfig?: AppConfig): Promise<void> {
       }
     })
 
+    // A new page has to ask for kept errors before they are sent to it.
+    windowLoading()
+    mainWindow.webContents.on('did-start-loading', windowLoading)
     mainWindow.webContents.once('did-finish-load', () => {
       if (pendingDeepLink) {
         const url = pendingDeepLink
