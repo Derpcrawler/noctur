@@ -1,3 +1,19 @@
+## 1.1.5
+
+### New
+
+- Proxy ports follow your subscription, unless you set them yourself in Settings.
+
+### Improved
+
+- Clear messages when the core file is missing or the subscription's configuration is rejected, with a link to your provider's support.
+- Electron 44.9.3 with the latest security fixes.
+- Smaller download and installed size.
+
+### Fixed
+
+- Bug fixes
+
 ## 1.1.2
 
 ### Fixed
