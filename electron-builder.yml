@@ -17,6 +17,15 @@ files:
   - LICENSE
   - '!**/.vscode/**'
 afterPack: build/noctur-check-package.cjs
+# Noctur: Chromium's own strings only for the app's languages (macOS names them en, ru, zh_CN;
+# Windows and Linux en-US, ru, zh-CN). The app picks its language from the system list, which
+# does not depend on these.
+electronLanguages:
+  - en
+  - en-US
+  - ru
+  - zh_CN
+  - zh-CN
 extraResources:
   - from: './extra/'
     to: ''
