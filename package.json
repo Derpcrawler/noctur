@@ -1,6 +1,6 @@
 {
   "name": "noctur",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "Desktop client for the mihomo proxy core",
   "main": "./out/main/index.js",
   "author": "Noctur",

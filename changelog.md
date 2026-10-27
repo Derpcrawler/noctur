@@ -1,3 +1,10 @@
+## 1.1.6
+
+### Fixed
+
+- Windows: rewrote the self-update logic and moved it from PowerShell to Go.
+- Windows: if updating from inside the app does not work, download the installer from the release page and install it manually.
+
 ## 1.1.5
 
 ### New
