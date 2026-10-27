@@ -6,6 +6,8 @@
 // own command line arguments to param.txt next to this program ("empty" when there are none);
 // they are passed on as one argument, as the app expects.
 //
+// With "update" as the first argument it is the self-update helper instead (update.go).
+//
 // Written for Noctur to replace the prebuilt koala-clash-run.exe that upstream downloads
 // from a moving release tag. scripts/prepare.mjs builds it with GOOS=windows.
 package main
@@ -21,6 +23,9 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "update" {
+		os.Exit(runUpdate(os.Args[2:], windowsSystem{}))
+	}
 	if err := run(); err != nil {
 		showError(err.Error())
 		os.Exit(1)

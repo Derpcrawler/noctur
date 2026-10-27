@@ -3,9 +3,9 @@
 import { app } from 'electron'
 import { execFile, spawn } from 'child_process'
 import path from 'path'
-import { existsSync, rmSync } from 'fs'
+import { copyFileSync, existsSync, rmSync } from 'fs'
 import { getRuntimeConfig } from '../core/factory'
-import { dataDir } from '../utils/dirs'
+import { dataDir, resourcesFilesDir } from '../utils/dirs'
 import { setNotQuitDialog, mainWindow } from '..'
 import {
   appleScriptFor,
@@ -15,8 +15,7 @@ import {
   MAC_CHECKSUM_EXIT,
   macInstallScript,
   ProxyConfig,
-  UpdateInfo,
-  winHelperScript
+  UpdateInfo
 } from '../noctur/update'
 
 /** What the window shows for an update in progress. */
@@ -84,6 +83,30 @@ function runAppleScript(script: string): Promise<void> {
   })
 }
 
+/**
+ * Windows: starts the update helper (build/runner/update.go) and resolves once it runs. It is a copy
+ * of the launcher next to the installer: the installer closes every process started from the
+ * install folder and replaces those files. The helper waits for the app to quit, runs the installer
+ * and opens the current version again if the update did not install; it logs to update.log.
+ */
+function startWinHelper(installer: string, version: string): Promise<void> {
+  const dir = path.dirname(installer)
+  const helper = path.join(dir, 'noctur-update.exe')
+  copyFileSync(path.join(resourcesFilesDir(), 'noctur-run.exe'), helper)
+  const args = ['update', String(process.pid), installer, app.getPath('exe'), version]
+  return new Promise((resolve, reject) => {
+    const child = spawn(helper, [...args, path.join(dir, 'update.log')], {
+      detached: true,
+      stdio: 'ignore'
+    })
+    child.once('error', reject)
+    child.once('spawn', () => {
+      child.unref()
+      resolve()
+    })
+  })
+}
+
 export async function downloadAndInstallUpdate(version: string): Promise<void> {
   if (!latest || latest.version !== version) await checkUpdate()
   const file = latest?.version === version ? latest.file : undefined
@@ -134,19 +157,7 @@ export async function downloadAndInstallUpdate(version: string): Promise<void> {
       }
       rmSync(dest, { force: true })
     } else if (process.platform === 'win32') {
-      spawn(
-        'powershell.exe',
-        [
-          '-NoProfile',
-          '-ExecutionPolicy',
-          'Bypass',
-          '-WindowStyle',
-          'Hidden',
-          '-Command',
-          winHelperScript(dest, app.getPath('exe'), process.pid)
-        ],
-        { detached: true, stdio: 'ignore', windowsHide: true }
-      ).unref()
+      await startWinHelper(dest, version)
     } else {
       throw new Error('no installer for this platform')
     }
@@ -162,8 +173,8 @@ export async function downloadAndInstallUpdate(version: string): Promise<void> {
     if (kind === 'cancelled') return
     throw e
   }
-  // macOS: installed, restart into it. Windows: the helper starts the installer once the app is
-  // gone, and the installer opens the new version.
+  // macOS: installed, restart into it. Windows: the helper runs the installer once the app is gone,
+  // and the installer opens the new version.
   quitForUpdate(process.platform === 'darwin')
 }
 

@@ -5,9 +5,9 @@
 // - The download is checked against the SHA-256 GitHub reports for the release file (as upstream).
 // - macOS: one password prompt while the app is open; the package is copied into a folder only root
 //   can write to, checked again there and installed, then the app restarts itself. Windows: the app
-//   quits normally first (the core stops and the system proxy is reset), and a hidden helper starts
-//   the installer (UAC), which opens the new version; if UAC is declined the helper opens the current
-//   version again.
+//   quits normally first (the core stops and the system proxy is reset), and a helper
+//   (build/runner/update.go) runs the installer, which opens the new version; if the update does not
+//   install (UAC declined, the installer fails), the helper opens the current version again.
 // - Other platforms and builds without a matching release file get a link to the release page.
 import axios, { AxiosRequestConfig } from 'axios'
 import { createHash } from 'crypto'
@@ -214,24 +214,4 @@ export const SELF_UPDATE_FLAG = '/private/var/run/noctur-self-update'
 export function appleScriptFor(script: string, admin: boolean): string {
   const quoted = `/bin/sh -c ${shQuote(script)}`.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
   return `do shell script "${quoted}"${admin ? ' with administrator privileges' : ''}`
-}
-
-/** A string as one PowerShell single-quoted literal. */
-function psQuote(s: string): string {
-  return `'${s.replace(/'/g, "''")}'`
-}
-
-/**
- * Windows: the hidden PowerShell helper. It waits for the app to exit, then starts the installer
- * silently; the installer asks for UAC and opens the new version when done (--force-run). If the
- * prompt is declined or the installer cannot start, it opens the current version again.
- */
-export function winHelperScript(installer: string, appExe: string, pid: number): string {
-  return [
-    `Wait-Process -Id ${Math.trunc(pid)} -Timeout 60 -ErrorAction SilentlyContinue`,
-    // try and catch stay one statement: a ";" between them is a parse error, and PowerShell then
-    // runs none of the script.
-    `try { Start-Process -FilePath ${psQuote(installer)} -ArgumentList '/S','--updated','--force-run' -ErrorAction Stop } ` +
-      `catch { Start-Process -FilePath ${psQuote(appExe)} }`
-  ].join('; ')
 }

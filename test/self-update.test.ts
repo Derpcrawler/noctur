@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { execFile, spawn, spawnSync } from 'child_process'
+import { execFile } from 'child_process'
 import { createHash } from 'crypto'
 import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'fs'
 import { createServer } from 'http'
@@ -13,8 +13,7 @@ import {
   macInstallScript,
   pickRelease,
   Release,
-  shQuote,
-  winHelperScript
+  shQuote
 } from '../src/main/noctur/update'
 
 const sha = (b: Buffer | string): string => createHash('sha256').update(b).digest('hex')
@@ -158,54 +157,4 @@ describe.runIf(process.platform === 'darwin')('self-update install script (macOS
     expect(err).toMatch(/\(12\)\s*$/)
     expect(existsSync(s.installed)).toBe(false)
   })
-})
-
-// The Windows helper as the app passes it to PowerShell with -Command, with shell scripts standing in
-// for the installer and the app. Runs where PowerShell 7 is installed (`pwsh` on PATH, or PWSH).
-const pwsh = process.env.PWSH || 'pwsh'
-const hasPwsh =
-  process.platform !== 'win32' && spawnSync(pwsh, ['-NoProfile', '-Command', 'exit 0']).status === 0
-
-describe.runIf(hasPwsh)('self-update helper script (Windows)', () => {
-  function standIn(dir: string, name: string, out: string): string {
-    const file = path.join(dir, name)
-    writeFileSync(file, `#!/bin/sh\necho "$@" > ${shQuote(out)}\n`)
-    chmodSync(file, 0o755)
-    return file
-  }
-
-  // The app has exited by the time the helper runs; a finished process stands in for it.
-  async function runHelper(installer: string, appExe: string): Promise<void> {
-    const app = spawn('/usr/bin/true')
-    await new Promise((resolve) => app.on('exit', resolve))
-    await new Promise<void>((resolve, reject) =>
-      execFile(
-        pwsh,
-        ['-NoProfile', '-NonInteractive', '-Command', winHelperScript(installer, appExe, app.pid!)],
-        (err, _o, stderr) => (err ? reject(new Error(stderr)) : resolve())
-      )
-    )
-  }
-
-  // Start-Process returns without waiting for the started program.
-  async function waitFor(file: string): Promise<string> {
-    for (let i = 0; i < 50 && !existsSync(file); i++) await new Promise((r) => setTimeout(r, 100))
-    return readFileSync(file, 'utf8').trim()
-  }
-
-  it('starts the installer silently with the update arguments', async () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "noctur upd's "))
-    const installer = standIn(dir, "Noctur's setup.exe", path.join(dir, 'installer ran'))
-    const appExe = standIn(dir, 'Noctur.exe', path.join(dir, 'app ran'))
-    await runHelper(installer, appExe)
-    expect(await waitFor(path.join(dir, 'installer ran'))).toBe('/S --updated --force-run')
-    expect(existsSync(path.join(dir, 'app ran'))).toBe(false)
-  }, 20000)
-
-  it('opens the current version again when the installer cannot start', async () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "noctur upd's "))
-    const appExe = standIn(dir, 'Noctur.exe', path.join(dir, 'app ran'))
-    await runHelper(path.join(dir, 'missing setup.exe'), appExe)
-    expect(await waitFor(path.join(dir, 'app ran'))).toBe('')
-  }, 20000)
 })
