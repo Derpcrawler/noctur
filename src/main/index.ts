@@ -31,6 +31,8 @@ import { initProfileUpdater } from './core/profileUpdater'
 import { appendFileSync, existsSync, writeFileSync } from 'fs'
 import { exePath, logPath, taskDir } from './utils/dirs'
 import { afterPidFromArgv, waitForPidExit } from './noctur/admin-relaunch'
+import { createShowGate, ShowGate } from './noctur/window-show'
+import { watchSessionEnd } from './noctur/session-end'
 import { hasTrayHost } from './noctur/tray-host'
 import { shutdownAndExit } from './noctur/shutdown-sequence'
 import { carryAstraAutostart, reportAstraMove } from './noctur/astra-carry'
@@ -71,13 +73,16 @@ export function showError(title: string, message: string, supportUrl?: string): 
 let pendingDeepLink: string | null = null
 let isCreatingWindow = false
 let windowShown = false
+let windowCreatedOnce = false
+let maximizeOnShow = false
+let showGate: ShowGate | null = null
 let createWindowPromiseResolve: (() => void) | null = null
 let createWindowPromise: Promise<void> | null = null
 
 async function scheduleLightweightMode(): Promise<void> {
   const {
-    autoLightweight = false,
-    autoLightweightDelay = 60,
+    autoLightweight = true,
+    autoLightweightDelay = 300,
     autoLightweightMode = 'core'
   } = await getAppConfig()
 
@@ -92,10 +97,8 @@ async function scheduleLightweightMode(): Promise<void> {
       await quitWithoutCore()
     } else {
       if (mainWindow && !mainWindow.isVisible()) {
+        // Noctur: a Dock icon the user keeps stays: it is one way back to the window.
         mainWindow.destroy()
-        if (process.platform === 'darwin' && app.dock) {
-          app.dock.hide()
-        }
       }
     }
   }
@@ -217,6 +220,8 @@ app.on('open-url', async (_event, url) => {
     await handleDeepLink(url)
   } else {
     pendingDeepLink = url
+    // Noctur: with no window (lightweight mode) nothing else would load the page that takes the link.
+    if (!mainWindow && windowCreatedOnce) void showMainWindow()
   }
 })
 
@@ -330,6 +335,10 @@ app.whenReady().then(async () => {
   }
   const { showFloatingWindow: showFloating = false, disableTray = false } = appConfig
   registerIpcMainHandlers()
+  watchSessionEnd(async () => {
+    triggerSysProxy(false, false)
+    await stopCore()
+  })
   void carryAstraAutostart()
   reportAstraMove()
 
@@ -527,7 +536,9 @@ export async function createWindow(appConfig?: AppConfig): Promise<void> {
         windowStateKeeper({
           defaultWidth: 800,
           defaultHeight: 700,
-          file: 'window-state.json'
+          file: 'window-state.json',
+          // Noctur: maximizing shows a hidden window, so it waits for the show below.
+          maximize: false
         })
       ),
       process.platform === 'darwin'
@@ -569,7 +580,26 @@ export async function createWindow(appConfig?: AppConfig): Promise<void> {
       }
     })
     mainWindowState.manage(mainWindow)
+    windowCreatedOnce = true
+    maximizeOnShow = maximizeOnShow || mainWindowState.isMaximized
+    const createdWindow = mainWindow
+    showGate = createShowGate(() => {
+      if (createdWindow.isDestroyed()) return
+      windowShown = true
+      if (maximizeOnShow) {
+        maximizeOnShow = false
+        createdWindow.maximize()
+      }
+      createdWindow.show()
+      createdWindow.focusOnWebView()
+    })
     // Noctur: keep the window's base color equal to the palette background (see backgroundColor).
+    // Noctur: ready-to-show comes with a blank white frame, before the theme applies, so the window
+    // waits for the page to report a frame with its theme (App.tsx, noctur/window-show.ts).
+    ipcMain.removeAllListeners('nocturFirstFrame')
+    ipcMain.on('nocturFirstFrame', (event) => {
+      if (event.sender === createdWindow.webContents) showGate?.markReady()
+    })
     ipcMain.removeAllListeners('nocturWindowBackground')
     ipcMain.on('nocturWindowBackground', (_e, color: unknown) => {
       if (typeof color !== 'string' || !/^#[0-9a-f]{6}$/i.test(color)) return
@@ -590,9 +620,7 @@ export async function createWindow(appConfig?: AppConfig): Promise<void> {
         if (quitTimeout) {
           clearTimeout(quitTimeout)
         }
-        windowShown = true
-        mainWindow?.show()
-        mainWindow?.focusOnWebView()
+        showGate?.requestShow()
       } else {
         await scheduleLightweightMode()
       }
@@ -667,6 +695,8 @@ export async function createWindow(appConfig?: AppConfig): Promise<void> {
     })
 
     mainWindow.on('closed', () => {
+      showGate?.dispose()
+      showGate = null
       mainWindow = null
     })
 
@@ -681,11 +711,6 @@ export async function createWindow(appConfig?: AppConfig): Promise<void> {
 
     mainWindow.on('move', () => {
       if (mainWindow) mainWindowState.saveState(mainWindow)
-    })
-
-    mainWindow.on('session-end', async () => {
-      triggerSysProxy(false, false)
-      await stopCore()
     })
 
     mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -729,17 +754,25 @@ export async function showMainWindow(): Promise<void> {
       app.dock.hide()
     }
   }
-  if (mainWindow) {
-    windowShown = true
-    mainWindow.show()
-    mainWindow.focusOnWebView()
-  } else {
+  if (!mainWindow) {
     await createWindow()
-    if (mainWindow !== null) {
-      windowShown = true
-      ;(mainWindow as BrowserWindow).show()
-      ;(mainWindow as BrowserWindow).focusOnWebView()
-    }
+  }
+  showGate?.requestShow()
+}
+
+// Noctur: opens a page from the main process. A window just created has no listener yet, so the
+// message waits for the page, as deep links do.
+export async function openMainWindowPage(page: string): Promise<void> {
+  await showMainWindow()
+  const contents = mainWindow?.webContents
+  if (!contents) return
+  const send = (): void => {
+    if (!contents.isDestroyed()) contents.send('nocturNavigate', page)
+  }
+  if (contents.isLoading()) {
+    contents.once('did-finish-load', () => setTimeout(send, 500))
+  } else {
+    send()
   }
 }
 

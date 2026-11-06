@@ -1,6 +1,6 @@
 {
   "name": "noctur",
-  "version": "1.1.6",
+  "version": "1.5.0",
   "description": "Desktop client for the mihomo proxy core",
   "main": "./out/main/index.js",
   "author": "Noctur",
@@ -24,6 +24,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@paper-design/shaders": "0.0.82",
     "adm-zip": "^0.5.17",
     "axios": "^1.15.1",
     "file-icon": "^6.0.0",
@@ -63,7 +64,7 @@
     "crypto-js": "^4.2.0",
     "dayjs": "^1.11.20",
     "driver.js": "^1.4.0",
-    "electron": "^44.9.3",
+    "electron": "^44.10.2",
     "electron-builder": "26.8.1",
     "electron-vite": "^4.0.1",
     "electron-window-state": "^5.0.3",

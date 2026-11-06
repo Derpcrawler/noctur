@@ -77,17 +77,26 @@ interface AppConfig {
   useWindowFrame: boolean
   proxyInTray: boolean
   appTheme: AppTheme
-  // Noctur palette id, see src/renderer/src/noctur/palettes.ts
+  // Noctur skin, 'noctur' or 'void' (src/renderer/src/noctur/palettes.ts)
   palette?: string
-  // Noctur: stars behind the window, and the jump animation on connect
-  starField?: boolean
+  // Noctur: the window background (unset: gradient)
+  background?: 'gradient' | 'flat'
+  // Noctur: draw the moving background as a grid of dots (unset: off)
+  backgroundDots?: boolean
+  // Noctur: icons next to the sidebar items (unset: on)
+  navIcons?: boolean
+  // Noctur: frames per second of the moving background (unset: 24)
+  backgroundFps?: number
+  // Noctur: Home in full or minimal (unset: full)
+  homeLayout?: 'full' | 'minimal'
+  // Noctur: the Traffic tile on Home (unset: on)
+  homeTraffic?: boolean
+  // Noctur: proxy groups on Home as a list or as tiles (unset: tiles)
+  homeGroups?: 'list' | 'tiles'
+  // Noctur: the Home address tiles may look the addresses up (unset: Home asks)
+  addressLookup?: boolean
   // Noctur: version tag of the downloaded mihomo core in use; empty for the built-in one
   downloadedCore?: string
-  connectJump?: boolean
-  // Noctur: the look, 'noctur' (the moon and moving sky) or 'calm' (a power switch, still sky), and
-  // whether it was chosen; the first-launch picker shows until it is.
-  look?: 'noctur' | 'calm'
-  lookChosen?: boolean
   customTheme?: string
   autoCheckUpdate: boolean
   /** Noctur: the window's language, for the main process at the next start. */

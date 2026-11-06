@@ -62,6 +62,10 @@ export async function patchControledMihomoConfig(patch: Partial<MihomoConfig>): 
   }
   if (patchToMerge.dns?.['use-hosts']) {
     controledMihomoConfig.hosts = patchToMerge.hosts
+  } else if (patchToMerge.dns?.['use-hosts'] === false) {
+    // Noctur: mihomo applies the top-level hosts list even with use-hosts off.
+    delete controledMihomoConfig.hosts
+    delete patchToMerge.hosts
   }
   controledMihomoConfig = deepMerge(controledMihomoConfig, patchToMerge)
   const { logLevel } = await generateProfile()

@@ -11,6 +11,7 @@ import { Button } from '@renderer/components/ui/button'
 import { Switch } from '@renderer/components/ui/switch'
 import { BaseEditor } from '../base/base-editor-lazy'
 import { getProfileStr, setProfileStr } from '@renderer/utils/ipc'
+import { toast } from 'sonner'
 import ConfirmModal from '../base/base-confirm'
 import { useTranslation } from 'react-i18next'
 
@@ -27,6 +28,8 @@ const EditFileModal: React.FC<Props> = (props) => {
   const [isDiff, setIsDiff] = useState(false)
   const [sideBySide, setSideBySide] = useState(false)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
+  // Noctur: the editor is empty until the read succeeds; saving then would erase the file.
+  const [isLoaded, setIsLoaded] = useState(false)
   const dialogCloseRef = useRef<HTMLButtonElement>(null)
   const forceCloseRef = useRef(false)
 
@@ -43,9 +46,14 @@ const EditFileModal: React.FC<Props> = (props) => {
   }
 
   const getContent = async (): Promise<void> => {
-    const data = await getProfileStr(id)
-    setCurrData(data)
-    setOriginalData(data)
+    try {
+      const data = await getProfileStr(id)
+      setCurrData(data)
+      setOriginalData(data)
+      setIsLoaded(true)
+    } catch (e) {
+      toast.error(`${t('profile.fileLoadError')}: ${e}`)
+    }
   }
 
   useEffect(() => {
@@ -137,6 +145,7 @@ const EditFileModal: React.FC<Props> = (props) => {
             </Button>
             <Button
               size="sm"
+              disabled={!isLoaded}
               onClick={async () => {
                 await setProfileStr(id, currData)
                 setOriginalData(currData)

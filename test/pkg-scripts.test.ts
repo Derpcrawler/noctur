@@ -118,8 +118,7 @@ afterEach(() => {
 })
 
 describe.skipIf(process.platform !== 'darwin')('macOS installer scripts', () => {
-  // A manual install over a running Noctur left the old version running until it was restarted by
-  // hand (owner, 2026-10-11): it is now quit before and opened again after.
+  // A manual install over a running Noctur quits it before and opens the new version after.
   it('quits a running Noctur before a manual install and opens it again after', async () => {
     const exe = join(root, 'Applications', 'Noctur.app', 'Contents', 'MacOS', 'Noctur')
     program(exe)
@@ -140,8 +139,8 @@ describe.skipIf(process.platform !== 'darwin')('macOS installer scripts', () => 
     )
   })
 
-  // macOS ran preinstall twice in one installation (owner's test, 2026-10-11): the second run found
-  // Noctur already gone, the first run's note was lost, and nothing opened Noctur again.
+  // macOS can run preinstall twice in one installation; the second run finds Noctur already gone,
+  // and the first run's note must still make postinstall open Noctur again.
   it('opens Noctur again when preinstall runs twice in one installation', async () => {
     const exe = join(root, 'Applications', 'Noctur.app', 'Contents', 'MacOS', 'Noctur')
     program(exe)

@@ -3,8 +3,8 @@ export const defaultConfig: AppConfig = {
   silentStart: false,
   appTheme: 'system',
   palette: 'noctur',
-  starField: true,
-  connectJump: true,
+  background: 'gradient',
+  navIcons: true,
   // Noctur: Linux has no native buttons over a frameless window, so it uses the system title bar.
   useWindowFrame: process.platform === 'linux',
   proxyInTray: true,
@@ -30,6 +30,8 @@ export const defaultConfig: AppConfig = {
   disableGPU: false,
   proxyDisplayLayout: 'double',
   groupDisplayLayout: 'double',
+  autoLightweight: true,
+  autoLightweightDelay: 300,
   autoLightweightMode: 'tray',
   mainSwitchMode: 'tun',
   useHotReloadProfile: true

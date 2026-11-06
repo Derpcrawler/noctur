@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useRef } from 'react'
 import earthshine from '@renderer/assets/moon/earthshine.png'
-import day from '@renderer/assets/moon/day.png'
 import blue from '@renderer/assets/moon/blue.png'
+import day from '@renderer/assets/moon/day.png'
 
 // The Noctur eclipse: the moon with the sun rising at its top right edge, the same drawing as the
 // app icon (design/brand). On Home it shows the connection state and plays the sunrise: a pale
@@ -9,8 +9,8 @@ import blue from '@renderer/assets/moon/blue.png'
 // 0.6 s on disconnect. As the sidebar mark it is drawn connected and does not move.
 
 export type EclipseState = 'off' | 'connecting' | 'on'
-type Moon = 'earthshine' | 'day' | 'blue'
-const TEXTURE: Record<Moon, string> = { earthshine, day, blue }
+type Moon = 'earthshine' | 'blue' | 'day'
+const TEXTURE: Record<Moon, string> = { earthshine, blue, day }
 
 interface Props {
   state?: EclipseState
@@ -28,7 +28,7 @@ const C = { x: 50, y: 48 }
 const ANG = Math.atan2(SY - C.y, SX - C.x)
 // The thin ring around the dim moon while disconnected.
 const HALO = 0.1
-// The moon's opacity while disconnected (owner, 2026-10-11: 0.55 left it nearly black).
+// The moon's opacity while disconnected (at 0.55 it is nearly black).
 const MOON_OFF = 0.7
 const clamp = (v: number, a = 0, b = 1): number => Math.min(b, Math.max(a, v))
 const ramp = (t: number, a: number, b: number): number => clamp((t - a) / (b - a))
@@ -37,7 +37,13 @@ const easeInOut = (t: number): number => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow
 const bell = (t: number, a: number, p: number, b: number): number =>
   t < a || t > b ? 0 : t < p ? easeOut((t - a) / (p - a)) : 1 - easeInOut((t - p) / (b - p))
 
-const Eclipse: React.FC<Props> = ({ state = 'on', moon = 'earthshine', light = false, animate = true, className }) => {
+const Eclipse: React.FC<Props> = ({
+  state = 'on',
+  moon = 'earthshine',
+  light = false,
+  animate = true,
+  className
+}) => {
   const id = useId().replace(/:/g, '')
   const svgRef = useRef<SVGSVGElement>(null)
   // Sunrise progress (0 dark, 1 risen) and what is happening now.
@@ -89,7 +95,8 @@ const Eclipse: React.FC<Props> = ({ state = 'on', moon = 'earthshine', light = f
     cancelAnimationFrame(a.raf)
     a.start = performance.now()
     if (state === 'connecting') a.phase = 'connecting'
-    else if (state === 'on') a.phase = from === 'connecting' || (from === 'off' && a.p < 1) ? 'rising' : 'on'
+    else if (state === 'on')
+      a.phase = from === 'connecting' || (from === 'off' && a.p < 1) ? 'rising' : 'on'
     else a.phase = from === 'connecting' ? 'fading' : a.p > 0 ? 'setting' : 'off'
 
     const startP = a.p
@@ -97,7 +104,8 @@ const Eclipse: React.FC<Props> = ({ state = 'on', moon = 'earthshine', light = f
       const el = (now - a.start) / 1000
       let pulse = 0
       if (a.phase === 'connecting') {
-        pulse = Math.min(1, el / 0.4) * (0.55 + 0.45 * (0.5 - 0.5 * Math.cos((el * Math.PI * 2) / 1.6)))
+        pulse =
+          Math.min(1, el / 0.4) * (0.55 + 0.45 * (0.5 - 0.5 * Math.cos((el * Math.PI * 2) / 1.6)))
       } else if (a.phase === 'rising') {
         a.p = clamp(startP + el / (crossfade ? 0.35 : 1.5))
         pulse = 1 - a.p
@@ -123,7 +131,13 @@ const Eclipse: React.FC<Props> = ({ state = 'on', moon = 'earthshine', light = f
   const ref = (k: string): string => `url(#${id}${k})`
   const initial = state === 'on' ? 1 : 0
   return (
-    <svg ref={svgRef} viewBox="0 0 100 100" className={className} aria-hidden="true" style={{ overflow: 'visible' }}>
+    <svg
+      ref={svgRef}
+      viewBox="0 0 100 100"
+      className={className}
+      aria-hidden="true"
+      style={{ overflow: 'visible' }}
+    >
       <defs>
         <radialGradient id={`${id}co`} cx="0.5" cy="0.5" r="0.5">
           <stop offset="0.6" stopColor={co[0] as string} stopOpacity="0" />
@@ -131,7 +145,14 @@ const Eclipse: React.FC<Props> = ({ state = 'on', moon = 'earthshine', light = f
           <stop offset="0.74" stopColor={co[3] as string} stopOpacity={co[4]} />
           <stop offset="1" stopColor={co[5] as string} stopOpacity="0" />
         </radialGradient>
-        <linearGradient id={`${id}cg`} gradientUnits="userSpaceOnUse" x1={SX} y1={SY} x2="27.88" y2="63.49">
+        <linearGradient
+          id={`${id}cg`}
+          gradientUnits="userSpaceOnUse"
+          x1={SX}
+          y1={SY}
+          x2="27.88"
+          y2="63.49"
+        >
           <stop offset="0" stopColor="#fff" />
           <stop offset="0.55" stopColor="#777" />
           <stop offset="1" stopColor="#222" />
@@ -150,7 +171,14 @@ const Eclipse: React.FC<Props> = ({ state = 'on', moon = 'earthshine', light = f
           <stop offset="0.4" stopColor="#C3D3FF" stopOpacity="0.3" />
           <stop offset="1" stopColor="#8FA8FF" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id={`${id}lg`} gradientUnits="userSpaceOnUse" x1="27.88" y1="63.49" x2={SX} y2={SY}>
+        <linearGradient
+          id={`${id}lg`}
+          gradientUnits="userSpaceOnUse"
+          x1="27.88"
+          y1="63.49"
+          x2={SX}
+          y2={SY}
+        >
           <stop offset="0" stopColor="#FFF3DD" stopOpacity="0" />
           <stop offset="0.45" stopColor="#FFF3DD" stopOpacity="0" />
           <stop offset="0.75" stopColor="#FFF3DD" stopOpacity="0.5" />
@@ -184,8 +212,23 @@ const Eclipse: React.FC<Props> = ({ state = 'on', moon = 'earthshine', light = f
           <circle cx="50" cy="48" r="27" />
         </clipPath>
       </defs>
-      <circle data-k="corona" cx="50" cy="48" r="42" fill={ref('co')} mask={ref('cm')} opacity={initial} />
-      <circle data-k="warm" cx={SX} cy={SY} r={initial ? 32 : 18} fill={ref('wg')} opacity={initial} />
+      <circle
+        data-k="corona"
+        cx="50"
+        cy="48"
+        r="42"
+        fill={ref('co')}
+        mask={ref('cm')}
+        opacity={initial}
+      />
+      <circle
+        data-k="warm"
+        cx={SX}
+        cy={SY}
+        r={initial ? 32 : 18}
+        fill={ref('wg')}
+        opacity={initial}
+      />
       <circle data-k="predawn" cx={SX} cy={SY} r="12" fill={ref('pd')} opacity="0" />
       <circle
         data-k="haloOff"
@@ -212,7 +255,15 @@ const Eclipse: React.FC<Props> = ({ state = 'on', moon = 'earthshine', light = f
         <circle data-k="riseHalo" cx={SX} cy={SY} r="11" fill={ref('ha')} />
         <circle data-k="riseCore" cx={SX} cy={SY} r="3" fill={ref('st')} />
       </g>
-      <circle data-k="rim" cx="50" cy="48" r="28" fill={ref('lg')} mask={ref('lm')} opacity={initial} />
+      <circle
+        data-k="rim"
+        cx="50"
+        cy="48"
+        r="28"
+        fill={ref('lg')}
+        mask={ref('lm')}
+        opacity={initial}
+      />
       <g data-k="beads" opacity={initial}>
         <circle cx="68.41" cy="28.25" r="1.98" fill={ref('bd')} fillOpacity="0.55" />
         <circle cx="74.67" cy="37.02" r="1.62" fill={ref('bd')} fillOpacity="0.45" />

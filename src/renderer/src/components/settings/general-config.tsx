@@ -10,6 +10,14 @@ import { checkAutoRun, disableAutoRun, enableAutoRun, relaunchApp } from '@rende
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import ConfirmModal from '../base/base-confirm'
 import { useTranslation } from 'react-i18next'
+import { FORK } from '@renderer/fork'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText
+} from '@renderer/components/ui/input-group'
+import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs'
 import { MessageCircleQuestionMark } from 'lucide-react'
 
 interface GeneralConfigProps {
@@ -25,7 +33,10 @@ const GeneralConfig: React.FC<GeneralConfigProps> = (props) => {
     silentStart = false,
 
     disableGPU = false,
-    checkUpdates
+    checkUpdates,
+    autoLightweight = true,
+    autoLightweightDelay = 300,
+    autoLightweightMode = 'core',
   } = appConfig || {}
 
   const [showRestartConfirm, setShowRestartConfirm] = useState(false)
@@ -56,6 +67,55 @@ const GeneralConfig: React.FC<GeneralConfigProps> = (props) => {
         />
       )}
       <SettingCard>
+        <SettingItem title={t('settings.advanced.autoEnterLightMode')} divider>
+          <Switch
+            checked={autoLightweight}
+            onCheckedChange={(value) => {
+              patchAppConfig({ autoLightweight: value })
+            }}
+          />
+        </SettingItem>
+        <div className="noctur-row-note">{t('settings.advanced.autoEnterLightModeHelp')}</div>
+        {autoLightweight && (
+          <>
+            {FORK.keepCore && (
+            <SettingItem title={t('settings.advanced.lightModeBehavior')} divider>
+              <Tabs
+                value={autoLightweightMode}
+                onValueChange={(value) => {
+                  patchAppConfig({ autoLightweightMode: value as 'core' | 'tray' })
+                  if (value === 'core') {
+                    patchAppConfig({ autoLightweightDelay: Math.max(autoLightweightDelay, 5) })
+                  }
+                }}
+              >
+                <TabsList>
+                  <TabsTrigger value="core">{t('settings.advanced.keepCoreOnly')}</TabsTrigger>
+                  <TabsTrigger value="tray">{t('settings.advanced.closeRendererOnly')}</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </SettingItem>
+            )}
+            <SettingItem title={t('settings.advanced.autoEnterLightModeDelay')} divider>
+              <InputGroup className="w-37.5 h-8">
+                <InputGroupInput
+                  type="number"
+                  value={autoLightweightDelay.toString()}
+                  onChange={async (event) => {
+                    let num = parseInt(event.target.value)
+                    if (isNaN(num)) num = 0
+                    const minDelay = autoLightweightMode === 'core' && FORK.keepCore ? 5 : 0
+                    if (num < minDelay) num = minDelay
+                    await patchAppConfig({ autoLightweightDelay: num })
+                  }}
+                />
+                <InputGroupAddon align="inline-end">
+                  <InputGroupText>{t('settings.advanced.seconds')}</InputGroupText>
+                </InputGroupAddon>
+              </InputGroup>
+            </SettingItem>
+          </>
+        )}
         <SettingItem title={t('settings.general.autoStart')} divider>
           <Switch
             checked={enable}

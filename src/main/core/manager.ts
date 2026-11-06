@@ -7,6 +7,7 @@ import { ChildProcess, execFile, execFileSync, spawn } from 'child_process'
 import {
   dataDir,
   logPath,
+  mihomoCoreDir,
   mihomoCorePath,
   mihomoIpcPath,
   mihomoProfileWorkDir,
@@ -44,7 +45,16 @@ import { createWriteStream, existsSync } from 'fs'
 import { disableSysProxy, triggerSysProxy } from '../sys/sysproxy'
 import { getAxios } from './mihomoApi'
 import { setSysDns } from '../service/api'
-import { DEFAULT_DNS_MODE, DnsDeps, defaultRun, pointDnsIntoTunnel, restoreDns } from '../noctur/system-dns'
+import {
+  clearResolver,
+  createDnsToolRunner,
+  DEFAULT_DNS_MODE,
+  DnsDeps,
+  defaultRun,
+  pointDnsIntoTunnel,
+  restoreDns,
+  withinLimit
+} from '../noctur/system-dns'
 import { t } from '../utils/i18n'
 import { CoreMissingError, ProfileRejectedError, showCoreError } from '../noctur/core-errors'
 
@@ -177,6 +187,8 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
   const { logLevel } = await generateProfile()
   await checkProfile()
   await stopCore()
+  // A quit accepted during the stop has already removed the resolver.
+  if (isShuttingDown()) throw new ShutdownInProgress()
   if (tun?.enable && autoSetDNSMode !== 'none') {
     try {
       await setPublicDNS()
@@ -195,6 +207,8 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
     DISABLE_SYSTEM_CA: String(disableSystemCA),
     DISABLE_NFTABLES: String(disableNftables),
     SAFE_PATHS: safePaths.join(path.delimiter),
+    // Noctur: keep IPv6 in the tunnel on a network without IPv6 (noctur/ipv6.ts).
+    SKIP_SYSTEM_IPV6_CHECK: 'true',
     PATH: process.env.PATH
   }
   // Noctur: no new core once a quit is accepted (sys/shutdown.ts). Checked right before the
@@ -556,9 +570,29 @@ export async function getDefaultDevice(): Promise<string> {
 
 // Noctur: the DNS steps live in noctur/system-dns.ts (every network service, each original saved,
 // one default for the mode); these keep upstream's names and the retry while offline.
+// A hung resolver tool must not hold up the restart queue. It gets no execFile timeout: it runs as
+// root, and a failed kill would report the call as ended while the process still runs, which would
+// break the tool runner's order.
+const DNS_COMMAND_LIMIT_MS = 3000
+
+const runResolverTool = createDnsToolRunner(
+  (action) => promisify(execFile)(path.join(mihomoCoreDir(), 'noctur-dns'), [action]),
+  DNS_COMMAND_LIMIT_MS
+)
+
 const systemDnsDeps: DnsDeps = {
   run: defaultRun,
   setViaService: (service, servers) => setSysDns(service, servers),
+  runDnsTool: runResolverTool,
+  readDnsConfig: async () => {
+    const task = promisify(execFile)('/usr/sbin/scutil', ['--dns'], {
+      timeout: DNS_COMMAND_LIMIT_MS
+    })
+    return (await withinLimit(task, 'scutil --dns', DNS_COMMAND_LIMIT_MS)).stdout
+  },
+  log: async (message) => {
+    await writeFile(logPath(), `${message}\n`, { flag: 'a' })
+  },
   getConfig: getAppConfig,
   patchConfig: patchAppConfig
 }
@@ -574,14 +608,17 @@ export async function setPublicDNS(): Promise<void> {
   }
 }
 
-export async function recoverDNS(): Promise<void> {
+export async function recoverDNS(retrying = false): Promise<void> {
   if (process.platform !== 'darwin') return
   if (setPublicDNSTimer) clearTimeout(setPublicDNSTimer)
   if (net.isOnline()) {
     await restoreDns(systemDnsDeps)
   } else {
+    // Removing the resolver writes local state only, so it does not wait for the network, and a quit
+    // can end before the retry. Once is enough: the retries are for what needs the network.
+    if (!retrying) await clearResolver(systemDnsDeps)
     if (recoverDNSTimer) clearTimeout(recoverDNSTimer)
-    recoverDNSTimer = setTimeout(() => recoverDNS(), 5000)
+    recoverDNSTimer = setTimeout(() => recoverDNS(true), 5000)
   }
 }
 

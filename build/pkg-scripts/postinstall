@@ -17,6 +17,9 @@ fi
 # --- Set suid on the mihomo binary ---
 chown root:admin "$CORRECT_PATH/Contents/Resources/sidecar/mihomo"
 chmod +s "$CORRECT_PATH/Contents/Resources/sidecar/mihomo"
+# --- Set suid on the tool that adds the tunnel's DNS resolver (src/main/noctur/system-dns.ts) ---
+chown root:wheel "$CORRECT_PATH/Contents/Resources/sidecar/noctur-dns"
+chmod 4755 "$CORRECT_PATH/Contents/Resources/sidecar/noctur-dns"
 # No alpha core is shipped; one found in the installed bundle is setuid root, so it is removed.
 rm -f "$CORRECT_PATH/Contents/Resources/sidecar/mihomo-alpha"
 

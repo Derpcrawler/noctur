@@ -15,7 +15,23 @@ export const useTrafficStore = create<TrafficStore>(() => ({
   traffic: initialTraffic
 }))
 
+// Noctur: the last minute of speeds, one sample per update from the core (about once a second), for
+// the Traffic tile's graph on Home.
+export const HISTORY_LENGTH = 60
+export interface SpeedSample {
+  down: number
+  up: number
+}
+export const useTrafficHistory = create<{ samples: SpeedSample[]; seq: number }>(() => ({
+  samples: [],
+  seq: 0
+}))
+
 const handleIpcPayload = (payload: ControllerTraffic): void => {
+  useTrafficHistory.setState((s) => ({
+    samples: [...s.samples, { down: payload.down, up: payload.up }].slice(-HISTORY_LENGTH),
+    seq: s.seq + 1
+  }))
   const prev = useTrafficStore.getState().traffic
   if (
     prev.up === payload.up &&

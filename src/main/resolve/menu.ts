@@ -1,5 +1,5 @@
 import { app, Menu, shell } from 'electron'
-import { mainWindow, showMainWindow } from '..'
+import { openMainWindowPage } from '..'
 import { getAppConfig } from '../config'
 import { quitWithoutCore } from '../core/manager'
 import { FORK } from '../fork'
@@ -37,8 +37,7 @@ export async function createApplicationMenu(): Promise<void> {
           label: t('menu.settings'),
           accelerator: 'Command+,',
           click: async (): Promise<void> => {
-            await showMainWindow()
-            mainWindow?.webContents.send('nocturNavigate', '/settings')
+            await openMainWindowPage('/settings')
           }
         },
         { type: 'separator' },

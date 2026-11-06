@@ -3,11 +3,19 @@ import { platform } from '@renderer/utils/init'
 import { FORK } from '@renderer/fork'
 import WindowControls from '@renderer/components/window-controls'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
-import React, { forwardRef, useImperativeHandle, useRef } from 'react'
+import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 
-const sidebarPaths = new Set(['/home', '/profiles', '/proxies', '/connections', '/rules', '/logs', '/settings'])
+const sidebarPaths = new Set([
+  '/home',
+  '/profiles',
+  '/proxies',
+  '/connections',
+  '/rules',
+  '/logs',
+  '/settings'
+])
 const isMac = platform === 'darwin'
 
 interface Props {
@@ -31,12 +39,38 @@ const BasePage = forwardRef<HTMLDivElement, Props>((props, ref) => {
     !isMac &&
     (!FORK.nativeWindowButtons || (platform === 'linux' && !(appConfig?.useWindowFrame ?? true)))
   // The slim strip on Home grows to fit drawn buttons, so the page starts below them.
-  const compactClass = props.compactHeader ? (drawWindowControls ? ' compact with-wc' : ' compact') : ''
+  const compactClass = props.compactHeader
+    ? drawWindowControls
+      ? ' compact with-wc'
+      : ' compact'
+    : ''
 
   const contentRef = useRef<HTMLDivElement>(null)
   useImperativeHandle(ref, () => {
     return contentRef.current as HTMLDivElement
   })
+
+  // Noctur: Home's top edge fades out as it scrolls under the window strip, over the first 32 px of
+  // scrolling (fork-theme.css). Set here rather than by a scroll-driven animation: when the page stops
+  // being scrollable (a group tile closes), Chromium keeps the animation's last value and the top stays
+  // faded. A size change of the page or its content sets it again.
+  const scrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!props.compactHeader || !el) return undefined
+    const set = (): void => {
+      el.style.setProperty('--nh-fade', `${(Math.min(el.scrollTop, 32) / 32) * 28}px`)
+    }
+    set()
+    el.addEventListener('scroll', set, { passive: true })
+    const resize = new ResizeObserver(set)
+    resize.observe(el)
+    if (el.firstElementChild) resize.observe(el.firstElementChild)
+    return (): void => {
+      el.removeEventListener('scroll', set)
+      resize.disconnect()
+    }
+  }, [props.compactHeader])
 
   return (
     <div ref={contentRef} className="w-full h-full">
@@ -61,7 +95,7 @@ const BasePage = forwardRef<HTMLDivElement, Props>((props, ref) => {
           </div>
         </div>
       </div>
-      <div className={`content noctur-content custom-scrollbar${compactClass}`}>
+      <div ref={scrollRef} className={`content noctur-content custom-scrollbar${compactClass}`}>
         {props.children}
       </div>
     </div>

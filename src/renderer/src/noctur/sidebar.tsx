@@ -1,7 +1,18 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Globe, Route } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  FileText,
+  Globe,
+  House,
+  Layers,
+  Route,
+  ScrollText,
+  Settings,
+  Waypoints,
+  type LucideIcon
+} from 'lucide-react'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
 import { useProfileConfig } from '@renderer/hooks/use-profile-config'
@@ -12,19 +23,26 @@ import { mihomoCloseAllConnections, patchMihomoConfig } from '@renderer/utils/ip
 import { fixedBytes } from './format'
 import ConfigViewer from '@renderer/components/sider/config-viewer'
 import Eclipse from './eclipse'
+import { useConnection } from './use-connection'
 import { useTheme } from 'next-themes'
 
-// Noctur sidebar (design/mockup.html): always open, text-only items, mark and name on top,
-// Rule/Global switch and a connection status card at the bottom. Replaces components/app-sidebar.tsx.
+// Noctur sidebar: always open, items with optional icons, mark and name on top; at the bottom the
+// Rule/Global switch and the connection block (state and switch, TUN or Proxy, live speeds).
+// Replaces components/app-sidebar.tsx.
 
-const NAV = [
-  { key: 'main', path: '/home', label: 'noctur.nav.home' },
-  { key: 'proxy', path: '/proxies', label: 'noctur.nav.proxies' },
-  { key: 'profile', path: '/profiles', label: 'noctur.nav.profiles' },
-  { key: 'connection', path: '/connections', label: 'noctur.nav.connections' },
-  { key: 'rule', path: '/rules', label: 'noctur.nav.rules' },
-  { key: 'log', path: '/logs', label: 'noctur.nav.logs' },
-  { key: 'settings', path: '/settings', label: 'noctur.nav.settings' }
+const NAV: { key: string; path: string; label: string; icon: LucideIcon }[] = [
+  { key: 'main', path: '/home', label: 'noctur.nav.home', icon: House },
+  { key: 'proxy', path: '/proxies', label: 'noctur.nav.proxies', icon: Layers },
+  { key: 'profile', path: '/profiles', label: 'noctur.nav.profiles', icon: FileText },
+  {
+    key: 'connection',
+    path: '/connections',
+    label: 'noctur.nav.connections',
+    icon: ArrowLeftRight
+  },
+  { key: 'rule', path: '/rules', label: 'noctur.nav.rules', icon: Waypoints },
+  { key: 'log', path: '/logs', label: 'noctur.nav.logs', icon: ScrollText },
+  { key: 'settings', path: '/settings', label: 'noctur.nav.settings', icon: Settings }
 ]
 const WITHOUT_PROFILES = new Set(['main', 'profile', 'settings'])
 // Sub-pages highlight the item they are opened from.
@@ -61,15 +79,23 @@ const NocturSidebar: React.FC = () => {
   const { mutate: mutateGroups } = useGroups()
   const traffic = useTrafficStore((s) => s.traffic)
   const activeConnections = useConnectionsStore((s) => s.active.length)
+  const conn = useConnection()
 
-  const { mainSwitchMode = 'tun', proxyMode = false, autoCloseConnection = true } = appConfig || {}
-  const { tun, mode } = controledMihomoConfig || {}
-  const connected = (tun?.enable ?? false) || proxyMode
+  const { autoCloseConnection = true, navIcons = true } = appConfig || {}
+  const { mode } = controledMihomoConfig || {}
   const hasProfiles = (profileConfig?.items?.length ?? 0) > 0
   const current = profileConfig?.items?.find((i) => i.id === profileConfig.current)
   const showMode = hasProfiles && current?.globalMode !== false && !!mode
   const items = hasProfiles ? NAV : NAV.filter((n) => WITHOUT_PROFILES.has(n.key))
   const activePath = PARENT[location.pathname] ?? location.pathname
+  const on = conn.busy ? conn.busy === 'connecting' : conn.connected
+  const state = conn.busy
+    ? conn.busy === 'connecting'
+      ? t('pages.home.connecting')
+      : t('pages.home.disconnecting')
+    : conn.connected
+      ? t('noctur.connected')
+      : t('noctur.disconnected')
 
   const changeMode = async (next: OutboundMode): Promise<void> => {
     await patchControledMihomoConfig({ mode: next })
@@ -97,6 +123,7 @@ const NocturSidebar: React.FC = () => {
             onClick={() => navigate(item.path)}
             onDoubleClick={item.key === 'profile' ? () => setShowRuntimeConfig(true) : undefined}
           >
+            {navIcons && <item.icon className="noctur-nav-icon" strokeWidth={1.5} aria-hidden />}
             <span>{t(item.label)}</span>
             {item.key === 'connection' && activeConnections > 0 && (
               <span className="noctur-count">{activeConnections}</span>
@@ -125,15 +152,43 @@ const NocturSidebar: React.FC = () => {
             ))}
           </div>
         )}
-        <div className="noctur-status">
-          <div className="noctur-status-top">
-            <span className={`noctur-dot${connected ? ' on' : ''}`} />
-            <span className="noctur-status-label">{connected ? t('noctur.connected') : t('noctur.disconnected')}</span>
-            <span className="noctur-chip">{mainSwitchMode === 'tun' ? t('noctur.tun') : t('noctur.sysProxyShort')}</span>
+        <div className="noctur-conn">
+          <div className="noctur-conn-top">
+            <span className="noctur-conn-state">{state}</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={on}
+              aria-label={conn.connected ? t('noctur.home.disconnect') : t('noctur.home.connect')}
+              disabled={conn.disabled}
+              className={`noctur-switch${conn.busy ? ' busy' : ''}`}
+              onClick={conn.toggle}
+            >
+              <i />
+            </button>
           </div>
-          <div className="noctur-status-rate noctur-fixed">
-            <span>↓ {fixedBytes(connected ? traffic.down : 0, true)}</span>
-            <span>↑ {fixedBytes(connected ? traffic.up : 0, true)}</span>
+          <div className="noctur-seg" role="group" aria-label={t('noctur.home.method')}>
+            {(['tun', 'sysproxy'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                aria-pressed={conn.method === m}
+                disabled={!!conn.busy || (m === 'sysproxy' && conn.connected && conn.proxyUnusable)}
+                onClick={() => conn.changeMethod(m)}
+              >
+                {m === 'tun' ? t('noctur.tun') : t('noctur.sysProxyShort')}
+              </button>
+            ))}
+          </div>
+          <div className="noctur-conn-rate noctur-fixed">
+            <span>
+              <i aria-hidden>↓</i>
+              {fixedBytes(conn.connected ? traffic.down : 0, true)}
+            </span>
+            <span>
+              <i aria-hidden>↑</i>
+              {fixedBytes(conn.connected ? traffic.up : 0, true)}
+            </span>
           </div>
         </div>
       </div>

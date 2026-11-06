@@ -32,7 +32,8 @@ for (const dir of ['sidecar', 'files']) {
   const full = path.join(cwd, 'extra', dir)
   if (!fs.existsSync(full)) continue
   for (const f of fs.readdirSync(full)) {
-    if (/^(mihomo|mihomo-alpha|sparkle-service)(\.exe)?$|\.exe$/.test(f)) fs.rmSync(path.join(full, f))
+    if (/^(mihomo|mihomo-alpha|sparkle-service|noctur-dns)(\.exe)?$|\.exe$/.test(f))
+      fs.rmSync(path.join(full, f))
   }
 }
 
@@ -141,7 +142,7 @@ async function resolveSidecar(binInfo) {
         const extractedFilePath = path.join(tempDir, extractedFile)
         fs.renameSync(extractedFilePath, sidecarPath)
         console.log(`[INFO]: "${name}" file renamed to "${sidecarPath}"`)
-        execSync(`chmod 755 ${sidecarPath}`)
+        execSync(`chmod 755 "${sidecarPath}"`)
         console.log(`[INFO]: "${name}" chmod binary finished`)
       } else {
         throw new Error(`Expected file not found in ${tempDir}`)
@@ -160,7 +161,7 @@ async function resolveSidecar(binInfo) {
           .pipe(writeStream)
           .on('finish', () => {
             console.log(`[INFO]: "${name}" gunzip finished`)
-            execSync(`chmod 755 ${sidecarPath}`)
+            execSync(`chmod 755 "${sidecarPath}"`)
             console.log(`[INFO]: "${name}" chmod binary finished`)
             resolve()
           })
@@ -258,9 +259,23 @@ const resolveEnableLoopback = () =>
   resolveResource({
     file: 'enableLoopback.exe',
     downloadURL: `https://github.com/Kuingsmile/uwp-tool/releases/download/latest/enableLoopback.exe`,
-    // Noctur: pinned, the "latest" tag can change. Checked 2026-09-29 (release of 2023-11-22).
+    // Noctur: pinned, the "latest" tag can change (release of 2023-11-22).
     sha256: 'f0c328376bd5ae0ef3b0eb19ac1f343c24a9abfe7bc1008d3b2f6ef3573d04d1'
   })
+// Noctur: built here from build/noctur-dns/main.c; macOS only. The installer makes it setuid root.
+const resolveDnsTool = async () => {
+  const output = path.join(cwd, 'extra', 'sidecar', 'noctur-dns')
+  fs.rmSync(output, { force: true })
+  if (platform !== 'darwin') return
+  fs.mkdirSync(path.dirname(output), { recursive: true })
+  const clangArch = arch === 'x64' ? 'x86_64' : 'arm64'
+  execSync(
+    `clang -O2 -Wall -arch ${clangArch} -mmacosx-version-min=13.0 -framework CoreFoundation -framework SystemConfiguration -o "${output}" build/noctur-dns/main.c`,
+    { cwd, stdio: 'inherit' }
+  )
+  console.log(`[INFO]: noctur-dns built for ${clangArch}`)
+}
+
 const resolveSparkleService = () => {
   const map = {
     'win32-x64': 'sparkle-service-windows-amd64-v1',
@@ -278,7 +293,7 @@ const resolveSparkleService = () => {
   const ext = platform === 'win32' ? '.exe' : ''
 
   // Noctur: pinned by hash because the pre-release tag can change and the app runs this as root.
-  // All three come from the upload of 2026-10-03 (commit dbe85a6, Go 1.26.8), checked 2026-10-08.
+  // All three come from the upload of 2026-10-03 (commit dbe85a6, Go 1.26.8).
   // Only the platforms the fork builds for are pinned.
   const pinned = {
     'darwin-arm64': '55263fa08ef9831d44a5e0b41dd2cb5b480e6b6bf9f678f87757b96f3144a5ee',
@@ -286,7 +301,9 @@ const resolveSparkleService = () => {
     'linux-x64': 'd87e8414f097a24b0b14f6d426ddb00a0646dd7f01bba9574659f6a0b529b691'
   }
   if (!pinned[`${platform}-${arch}`]) {
-    throw new Error(`sparkle-service: no pinned SHA-256 for ${platform}-${arch}; add one in scripts/prepare.mjs`)
+    throw new Error(
+      `sparkle-service: no pinned SHA-256 for ${platform}-${arch}; add one in scripts/prepare.mjs`
+    )
   }
   // NOCTUR_SPARKLE_SERVICE_DIR: a folder with the pinned builds under their release names, used
   // instead of the download once the tag has moved on. The hash is checked the same way.
@@ -355,6 +372,11 @@ const tasks = [
     name: 'sparkle-service',
     func: resolveSparkleService,
     retry: 5
+  },
+  {
+    name: 'noctur-dns',
+    func: resolveDnsTool,
+    retry: 1
   },
   {
     name: 'runner',

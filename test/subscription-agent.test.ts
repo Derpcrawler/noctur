@@ -38,6 +38,7 @@ vi.mock('../src/main/resolve/theme', () => ({ downloadCustomCss: async () => und
 vi.mock('../src/main/utils/i18n', () => ({ t: (k: string) => k }))
 
 import { addProfileItem, getProfileConfig } from '../src/main/config/profile'
+import { isDue } from '../src/main/core/profileUpdater'
 
 let server: Server
 let url = ''
@@ -49,10 +50,14 @@ beforeAll(async () => {
     const agent = req.headers['user-agent'] ?? ''
     s.agents.push(agent)
     res.setHeader('content-type', 'text/plain')
+    const interval = new URL(req.url ?? '/', 'http://x').searchParams.get('interval')
+    if (interval) res.setHeader('profile-update-interval', interval)
     res.end(
       agent.startsWith('mihomo')
         ? 'proxies:\n  - { name: a, type: socks5, server: 127.0.0.1, port: 1080 }\n'
-        : Buffer.from('vless://00000000-0000-0000-0000-000000000000@example.com:443#a').toString('base64')
+        : Buffer.from('vless://00000000-0000-0000-0000-000000000000@example.com:443#a').toString(
+            'base64'
+          )
     )
   })
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r))
@@ -72,5 +77,22 @@ describe('subscription User-Agent', () => {
     expect(item.agent).toBe('mihomo')
     expect(readFileSync(join(s.dir, `${item.id}.yaml`), 'utf8')).toContain('proxies:')
     expect(s.agents.map((a) => a.split(' ')[0].split('/')[0])).toEqual(['noctur', 'mihomo'])
+  })
+})
+
+// A profile-update-interval header that is negative, unreadable, tiny or huge is ignored and does
+// not replace the interval the user set.
+describe('profile-update-interval from the panel', () => {
+  it.each(['-1', 'abc', '0.02', '1e300', '0'])('ignores %s', async (value) => {
+    const withInterval = `${url}?interval=${value}`
+    await addProfileItem({ type: 'remote', url: withInterval, interval: 120 })
+    const item = (await getProfileConfig(true)).items.find((i) => i.url === withInterval)
+    expect(item?.interval).toBe(120)
+    expect(item?.locked).toBeFalsy()
+  })
+
+  it('is not due when the saved interval is negative', () => {
+    const item = { id: 'a', type: 'remote', interval: -60, updated: Date.now() } as ProfileItem
+    expect(isDue(item)).toBe(false)
   })
 })

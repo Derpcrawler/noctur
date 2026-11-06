@@ -1,50 +1,42 @@
-import NodePicker from '@renderer/noctur/node-picker'
-import { fixedBytes } from '@renderer/noctur/format'
-import Eclipse, { EclipseState } from '@renderer/noctur/eclipse'
+import Eclipse from '@renderer/noctur/eclipse'
 import { useTheme } from 'next-themes'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger
-} from '@renderer/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import BasePage from '@renderer/components/base/base-page'
-import { useAppConfig } from '@renderer/hooks/use-app-config'
-import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
 import { useProfileConfig } from '@renderer/hooks/use-profile-config'
 import { useGroups } from '@renderer/hooks/use-groups'
-import { updateTrayIcon, changeConnectionMethod, setConnected } from '@renderer/utils/ipc'
 import { useTranslation } from 'react-i18next'
 import { memo, useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import {
-  InfinityIcon,
   WifiOff,
   PlusCircle,
-  ChevronRight,
-  ChevronDown,
-  Globe,
   RefreshCcw,
   CalendarClock,
-  Power,
-  CreditCard
+  CreditCard,
+  ChevronDown
 } from 'lucide-react'
-import { SiTelegram } from 'react-icons/si'
 import EditInfoModal from '@renderer/components/profiles/edit-info-modal'
 import { Spinner } from '@renderer/components/ui/spinner'
-import { useTrafficStore } from '@renderer/store/traffic-store'
 import UpdateLine from '@renderer/noctur/update-line'
+import { useTrafficStore } from '@renderer/store/traffic-store'
+import { fixedBytes } from '@renderer/noctur/format'
+import HomeGroups, { Delay, GroupNodes } from '@renderer/noctur/home-groups'
+import HomeTiles from '@renderer/noctur/home-tiles'
+import { useAppConfig } from '@renderer/hooks/use-app-config'
+import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
+import TopApps from '@renderer/noctur/top-apps'
+import { indexOf, lastDelay, routeOf } from '@renderer/noctur/route'
+import { delayFor, useDelayMemory } from '@renderer/noctur/delays'
+import { useConnection } from '@renderer/noctur/use-connection'
 
 function formatBytes(bytes: number): string {
   if (bytes <= 0) return '0 B'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)))
   return `${(bytes / Math.pow(1024, i)).toFixed(i > 1 ? 1 : 0)} ${units[i]}`
 }
 
-// Days left at which the stats block is replaced by the renewal notice
+// Days left at which the plan's numbers are replaced by the renewal notice
 const EXPIRY_WARNING_DAYS = 3
 
 // Module-level variable: persists across component mounts/unmounts
@@ -76,39 +68,32 @@ const ConnectedTimer = memo(({ active }: { active: boolean }) => {
   const minutes = Math.floor((elapsed % 3600) / 60)
   const seconds = elapsed % 60
   return (
-    <span>
+    <time>
       {String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:
       {String(seconds).padStart(2, '0')}
-    </span>
+    </time>
   )
 })
 ConnectedTimer.displayName = 'ConnectedTimer'
 
 const Home: React.FC = () => {
   const { t } = useTranslation()
-  const { appConfig } = useAppConfig()
-  const {
-    mainSwitchMode = 'tun',
-    sysProxy,
-    proxyMode = false,
-    connectJump = true,
-    look = 'noctur'
-  } = appConfig || {}
-  const calm = look === 'calm'
   const { resolvedTheme } = useTheme()
   const light = resolvedTheme === 'light'
-  const { enable: writeSysProxy = true, mode } = sysProxy || {}
-  const { controledMihomoConfig } = useControledMihomoConfig()
-  const { tun } = controledMihomoConfig || {}
-  const { 'mixed-port': mixedPort } = controledMihomoConfig || {}
-  const sysProxyDisabled = mixedPort == 0
-
   const { profileConfig, addProfileItem } = useProfileConfig()
-  const { groups } = useGroups()
+  const { groups = [] } = useGroups()
   const hasProfiles = (profileConfig?.items?.length ?? 0) > 0
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingItem, setEditingItem] = useState<ProfileItem | null>(null)
   const [updating, setUpdating] = useState(false)
+  const [routeOpen, setRouteOpen] = useState(false)
+  const trafficNow = useTrafficStore((st) => st.traffic)
+  const conn = useConnection()
+  const { appConfig } = useAppConfig()
+  const { homeGroups = 'tiles', homeLayout = 'full', homeTraffic = true } = appConfig || {}
+  const minimal = homeLayout === 'minimal'
+  const { controledMihomoConfig } = useControledMihomoConfig()
+  const global = controledMihomoConfig?.mode === 'global'
 
   const handleAddProfile = (): void => {
     const newProfile: ProfileItem = {
@@ -123,27 +108,14 @@ const Home: React.FC = () => {
     setShowEditModal(true)
   }
 
-  const trafficInfo = useTrafficStore((s) => s.traffic)
-
-  const [loading, setLoading] = useState(false)
-  const [loadingDirection, setLoadingDirection] = useState<'connecting' | 'disconnecting'>(
-    'connecting'
-  )
-
-  const isSelected = (tun?.enable ?? false) || proxyMode
-
-  const isDisabled =
-    loading ||
-    (mainSwitchMode === 'sysproxy' && writeSysProxy && mode == 'manual' && sysProxyDisabled)
-
-  const status = loading
-    ? loadingDirection === 'connecting'
+  const status = conn.busy
+    ? conn.busy === 'connecting'
       ? t('pages.home.connecting')
       : t('pages.home.disconnecting')
-    : isSelected
+    : conn.connected
       ? t('pages.home.connected')
       : t('pages.home.disconnected')
-  const showConnectedTimer = !loading && isSelected
+  const live = !conn.busy && conn.connected
 
   // Current profile & subscription
   const currentProfile = useMemo(() => {
@@ -166,10 +138,10 @@ const Home: React.FC = () => {
   const subscription = currentProfile?.extra
   const trafficUsed = (subscription?.upload ?? 0) + (subscription?.download ?? 0)
   const trafficTotal = subscription?.total ?? 0
-  const trafficRemaining = trafficTotal > 0 ? trafficTotal - trafficUsed : 0
+  const trafficRemaining = trafficTotal > 0 ? Math.max(0, trafficTotal - trafficUsed) : 0
+  const usedShare = trafficTotal > 0 ? Math.min(1, trafficUsed / trafficTotal) : 0
   const expireTimestamp = subscription?.expire ?? 0
-  const expireDate =
-    expireTimestamp > 0 ? dayjs.unix(expireTimestamp).format('L') : t('pages.home.never')
+  const expireDate = expireTimestamp > 0 ? dayjs.unix(expireTimestamp).format('ll') : '∞'
 
   // Re-evaluate the countdown while the window stays open so the notice appears on time
   const [expiryTick, setExpiryTick] = useState(0)
@@ -201,68 +173,17 @@ const Home: React.FC = () => {
       ? t('pages.home.subscriptionExpiringToday')
       : t('pages.home.subscriptionExpiring', { count: daysRemaining })
 
-  const firstGroup = groups?.[0]
   const supportUrl = currentProfile?.supportUrl
-  const supportLinkInfo = useMemo(() => {
+  const supportHref = useMemo(() => {
     if (!supportUrl) return null
     try {
-      const parsed = new URL(supportUrl)
-      const normalized = `${parsed.hostname}${parsed.pathname}`.toLowerCase()
-      return {
-        href: parsed.toString(),
-        isTelegram:
-          parsed.protocol === 'tg:' ||
-          normalized.includes('t.me') ||
-          normalized.includes('telegram')
-      }
+      return new URL(supportUrl).toString()
     } catch {
       return null
     }
   }, [supportUrl])
 
-  const onValueChange = async (enable: boolean): Promise<void> => {
-    setLoading(true)
-    setLoadingDirection(enable ? 'connecting' : 'disconnecting')
-    try {
-      await setConnected(enable)
-      window.electron.ipcRenderer.send('updateFloatingWindow')
-      window.electron.ipcRenderer.send('updateTrayMenu')
-      await updateTrayIcon()
-    } catch (e) {
-      toast.error(`${e}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // The eclipse: dim while disconnected, pulsing while connecting, the sun up when connected.
-  const eclipseState: EclipseState =
-    loading && loadingDirection === 'connecting'
-      ? 'connecting'
-      : isSelected && !loading
-        ? 'on'
-        : 'off'
-
-  // TUN or System Proxy from the method chip; reconnects through the new method when connected.
-  const changeMethod = async (to: string): Promise<void> => {
-    if (to === mainSwitchMode || (to !== 'tun' && to !== 'sysproxy')) return
-    if (isSelected) {
-      setLoading(true)
-      setLoadingDirection('connecting')
-    }
-    try {
-      await changeConnectionMethod(to)
-      await updateTrayIcon()
-    } catch (e) {
-      toast.error(`${e}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-  // While connected, System Proxy with a manual proxy and no mixed port cannot carry traffic.
-  const proxyUnusable = writeSysProxy && mode == 'manual' && sysProxyDisabled
-
-  // "Updated 5 min ago · every 6 h" under the profile name (remote profiles only).
+  // "Updated 5 min ago · every 6 h" under the plan's name (remote profiles only).
   const updatedFromNow =
     currentProfile?.type === 'remote' && currentProfile.updated
       ? dayjs(currentProfile.updated).fromNow()
@@ -277,12 +198,181 @@ const Home: React.FC = () => {
           ? `${Math.floor(interval / 60)}${t('profile.hourShort')}`
           : `${interval}${t('profile.minuteShort')}`
 
-  const firstNow = firstGroup?.all?.find((p) => p.name === firstGroup.now)
-  const firstDelay = firstNow?.history?.length
-    ? firstNow.history[firstNow.history.length - 1].delay
-    : -1
-  const delayClass =
-    firstDelay <= 0 ? 'bad' : firstDelay < 150 ? 'ok' : firstDelay < 400 ? 'warn' : 'bad'
+  const firstGroup = groups[0]
+  const index = useMemo(() => indexOf(groups), [groups])
+  const route = firstGroup ? routeOf(groups, firstGroup, index) : null
+  // Remember every delay the core reports, so a later refresh without history keeps the number.
+  const memory = useDelayMemory((s) => s.delays)
+  const merge = useDelayMemory((s) => s.merge)
+  useEffect(() => {
+    const found: Record<string, number> = {}
+    index.forEach((p, name) => {
+      const d = lastDelay(p)
+      if (d >= 0) found[name] = d
+    })
+    merge(found)
+  }, [index, merge])
+  // The server's protocol, unless its name already says it ("Amsterdam Hysteria2"), with or without
+  // the version ("London Hysteria" for Hysteria2).
+  const serverType =
+    route &&
+    route.server.type &&
+    !route.server.name.toLowerCase().includes(route.server.type.toLowerCase().replace(/\d+$/, ''))
+      ? route.server.type
+      : ''
+
+  // The route's names: the main group's selection, and when that is a group, the server it uses now
+  // after it as "group: server", the server in bold. No joining word such as "via" is used, because
+  // names can contain it themselves ("Fastest via London via Paris").
+  const routeNames = !route ? null : route.server.name === route.selection ? (
+    <b>{route.selection}</b>
+  ) : (
+    <>
+      <span className="nh-hint">{route.selection}:</span> <b>{route.server.name}</b>
+    </>
+  )
+
+  // The plan and the update line, at the top of both Home layouts.
+  const planCard = (
+    <>
+      {/* The plan: logo (the moon when the provider sends none), name, the numbers and the bar */}
+      {currentProfile && (
+        <section className="noctur-card nh-plan" data-guide="home-profile-header">
+          <div className="nh-plan-row">
+            <div className="nh-plan-id">
+              <span className="nh-logo">
+                {currentProfile.logo ? (
+                  <img
+                    src={currentProfile.logo}
+                    alt=""
+                    onError={(e) => {
+                      ;(e.target as HTMLImageElement).style.display = 'none'
+                    }}
+                  />
+                ) : (
+                  <Eclipse
+                    className="nh-logo-mark"
+                    // A different moon from the sidebar's, so the plan does not repeat the app's mark.
+                    moon={light ? 'day' : 'blue'}
+                    light={light}
+                  />
+                )}
+              </span>
+              <div className="min-w-0">
+                <div className="nh-plan-name">
+                  <span className="truncate">{currentProfile.name}</span>
+                  {currentProfile.type === 'remote' && (
+                    <button
+                      type="button"
+                      className="nh-link"
+                      onClick={handleUpdateProfile}
+                      disabled={updating}
+                    >
+                      {updating ? (
+                        <Spinner className="size-3" />
+                      ) : (
+                        <RefreshCcw className="size-3" />
+                      )}
+                      {t('common.update')}
+                    </button>
+                  )}
+                </div>
+                {currentProfile.announce && (
+                  <div data-guide="home-profile-announce" className="nh-muted nh-announce">
+                    {currentProfile.announce}
+                  </div>
+                )}
+                {(updatedFromNow || intervalLabel || supportHref) && (
+                  <div className="nh-muted nh-plan-meta">
+                    {updatedFromNow && (
+                      <span>{t('noctur.home.updated', { time: updatedFromNow })}</span>
+                    )}
+                    {intervalLabel && (
+                      <span>{t('noctur.profile.every', { interval: intervalLabel })}</span>
+                    )}
+                    {supportHref && (
+                      <button
+                        data-guide="home-support-link"
+                        type="button"
+                        className="nh-underline"
+                        onClick={() => open(supportHref)}
+                      >
+                        {t('pages.profiles.support')}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            {subscription && !showExpiryNotice && (
+              <>
+                <div className="nh-plan-stat">
+                  <span className="nh-muted">{t('noctur.home.trafficLeft')}</span>
+                  <b>
+                    {trafficTotal > 0 ? (
+                      <>
+                        {formatBytes(trafficRemaining)}
+                        <span className="nh-pct">{Math.round((1 - usedShare) * 100)}%</span>
+                      </>
+                    ) : (
+                      '∞'
+                    )}
+                  </b>
+                </div>
+                <div className="nh-plan-stat">
+                  <span className="nh-muted">
+                    {expireTimestamp > 0
+                      ? t('noctur.home.daysLeft', { count: daysRemaining })
+                      : t('noctur.home.plan')}
+                  </span>
+                  <b>{expireDate}</b>
+                </div>
+              </>
+            )}
+          </div>
+          {subscription && !showExpiryNotice && trafficTotal > 0 && (
+            <>
+              <div className="nh-bar">
+                <i style={{ width: `${usedShare * 100}%` }} />
+              </div>
+              <div className="nh-muted">
+                {t('noctur.home.used', {
+                  used: formatBytes(trafficUsed),
+                  total: formatBytes(trafficTotal)
+                })}
+              </div>
+            </>
+          )}
+          {subscription && showExpiryNotice && (
+            <div role="status" className="noctur-expiry">
+              <div className="noctur-expiry-icon">
+                <CalendarClock className="size-5" aria-hidden />
+              </div>
+              <div className="min-w-0 grow">
+                <p className="noctur-expiry-title">{expiryTitle}</p>
+                <p className="noctur-expiry-hint">
+                  {isExpired
+                    ? t('pages.home.subscriptionExpiredHint')
+                    : t('pages.home.subscriptionExpiringHint', { date: expireDate })}
+                </p>
+              </div>
+              {renewAction && (
+                <button
+                  type="button"
+                  onClick={() => open(renewAction.url)}
+                  className="noctur-btn primary"
+                >
+                  <CreditCard className="size-4 shrink-0" aria-hidden />
+                  <span className="truncate">{renewAction.label}</span>
+                </button>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+      <UpdateLine />
+    </>
+  )
 
   return (
     <BasePage compactHeader>
@@ -317,284 +407,146 @@ const Home: React.FC = () => {
             />
           )}
         </div>
-      ) : (
-        <div className="noctur-home">
-          <div className="noctur-home-top">
-            {/* Profile card: name, update button and the subscription numbers in one row */}
-            {currentProfile && (
-              <div className="noctur-card noctur-prof">
-                <div data-guide="home-profile-header" className="noctur-prof-id">
-                  {currentProfile.logo ? (
-                    <img
-                      src={currentProfile.logo}
-                      alt=""
-                      className="noctur-logo"
-                      onError={(e) => {
-                        ;(e.target as HTMLImageElement).style.display = 'none'
-                      }}
-                    />
-                  ) : (
-                    <div className="noctur-logo">{currentProfile.name?.[0]?.toUpperCase()}</div>
-                  )}
-                  <div className="min-w-0">
-                    <div className="noctur-prof-name">
-                      <span className="truncate">{currentProfile.name}</span>
-                      {currentProfile.type === 'remote' && (
-                        <button
-                          onClick={handleUpdateProfile}
-                          disabled={updating}
-                          className="noctur-ib sm"
-                          title={t('pages.profiles.updateProfile', 'Update')}
-                        >
-                          <RefreshCcw className={`size-3.5 ${updating ? 'animate-spin' : ''}`} />
-                        </button>
-                      )}
-                    </div>
-                    {currentProfile.announce && (
-                      <div data-guide="home-profile-announce" className="noctur-prof-note">
-                        {currentProfile.announce}
-                      </div>
-                    )}
-                    {(updatedFromNow || intervalLabel || supportLinkInfo) && (
-                      <div className="noctur-prof-meta">
-                        {updatedFromNow && (
-                          <span>
-                            {t('profile.updatedAt')} {updatedFromNow}
-                          </span>
-                        )}
-                        {intervalLabel && (
-                          <span>{t('noctur.profile.every', { interval: intervalLabel })}</span>
-                        )}
-                        {supportLinkInfo && (
-                          <button
-                            data-guide="home-support-link"
-                            type="button"
-                            onClick={() => open(supportLinkInfo.href)}
-                            className="noctur-support"
-                          >
-                            {supportLinkInfo.isTelegram ? (
-                              <SiTelegram className="size-3" />
-                            ) : (
-                              <Globe className="size-3" />
-                            )}
-                            {t('pages.profiles.support')}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {subscription && !showExpiryNotice && (
-                  <>
-                    <div className="noctur-stat">
-                      <span>{t('pages.home.trafficRemaining')}</span>
-                      <b>
-                        {trafficTotal > 0 ? (
-                          formatBytes(trafficRemaining)
-                        ) : (
-                          <InfinityIcon className="size-4.5" />
-                        )}
-                      </b>
-                    </div>
-                    <div className="noctur-stat">
-                      <span>{t('pages.home.daysRemaining')}</span>
-                      <b>
-                        {expireTimestamp > 0 ? (
-                          daysRemaining
-                        ) : (
-                          <InfinityIcon className="size-4.5" />
-                        )}
-                      </b>
-                    </div>
-                    <div className="noctur-stat">
-                      <span>{t('pages.home.expires')}</span>
-                      <b>{expireDate}</b>
-                    </div>
-                    {trafficTotal > 0 && (
-                      <div className="noctur-usage">
-                        <div className="noctur-usage-bar">
-                          <i
-                            style={{
-                              width: `${Math.min(100, (trafficUsed / trafficTotal) * 100)}%`
-                            }}
-                          />
-                        </div>
-                        <div className="noctur-usage-meta">
-                          <span>
-                            {t('noctur.home.used', {
-                              used: formatBytes(trafficUsed),
-                              total: formatBytes(trafficTotal)
-                            })}
-                          </span>
-                          <span>{Math.round((trafficUsed / trafficTotal) * 100)}%</span>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-            {/* Subscription expiry notice replaces the numbers near the end of the period */}
-            {subscription && showExpiryNotice && (
-              <div role="status" className="noctur-card noctur-expiry">
-                <div className="noctur-expiry-icon">
-                  <CalendarClock className="size-5" aria-hidden />
-                </div>
-                <div className="min-w-0 grow">
-                  <p className="noctur-expiry-title">{expiryTitle}</p>
-                  <p className="noctur-expiry-hint">
-                    {isExpired
-                      ? t('pages.home.subscriptionExpiredHint')
-                      : t('pages.home.subscriptionExpiringHint', { date: expireDate })}
-                  </p>
-                </div>
-                {renewAction && (
-                  <button
-                    type="button"
-                    onClick={() => open(renewAction.url)}
-                    className="noctur-btn primary"
-                  >
-                    <CreditCard className="size-4 shrink-0" aria-hidden />
-                    <span className="truncate">{renewAction.label}</span>
-                  </button>
-                )}
-              </div>
-            )}
-            <UpdateLine />
-          </div>
-
-          {/* Noctur: the eclipse shows the state; the button under it connects and disconnects, and
-              so does a click on the moon (a mouse shortcut; keyboard and screen readers use the
-              button). Calm: the power switch from Astra Clash 1.0.6 does both, with no moon. */}
-          <div className="noctur-home-center">
-            {calm ? (
+      ) : minimal ? (
+        // Minimal Home (Settings, Appearance): the plan on top, the connection in the middle with its
+        // button, and the address and Traffic tiles in a row at the bottom, each of which can be off;
+        // without Traffic, one line of live speeds and the method stays under the button.
+        <div className="nm">
+          {planCard}
+          <div className="nm-main">
+            <div className="nm-state">
+              <span className={`nh-dot${live ? ' on' : ''}`} />
+              <span key={status} className="noctur-fade">
+                {status}
+              </span>
+            </div>
+            <div className="nm-time">{live ? <ConnectedTimer active={live} /> : ' '}</div>
+            {route ? (
               <button
                 type="button"
-                disabled={isDisabled}
-                onClick={() => onValueChange(!isSelected)}
-                data-guide="home-power-toggle"
-                aria-label={
-                  (loading ? loadingDirection === 'connecting' : !isSelected)
-                    ? t('noctur.home.connect')
-                    : t('noctur.home.disconnect')
-                }
-                className={`noctur-power${isSelected || (loading && loadingDirection === 'connecting') ? ' on' : ''}${loading ? ' busy' : ''}`}
+                className="nh-route nm-route flag-emoji"
+                title={t('noctur.home.showServers')}
+                aria-expanded={routeOpen}
+                onClick={() => setRouteOpen((o) => !o)}
               >
-                {loading ? (
-                  <Spinner className="size-12" />
-                ) : (
-                  <Power className="size-12" strokeWidth={2.2} />
-                )}
+                {routeNames}
+                <span className="nh-route-meta">
+                  {'· '}
+                  <Delay ms={delayFor(route.server.name, route.server.delay, memory)} live={live} />
+                </span>
+                <ChevronDown className="nh-route-chev" strokeWidth={2} aria-hidden />
               </button>
             ) : (
-              <div className="noctur-eclipse">
-                <Eclipse
-                  className="noctur-eclipse-art"
-                  state={eclipseState}
-                  moon={light ? 'day' : 'earthshine'}
-                  light={light}
-                  animate={connectJump}
-                />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  disabled={isDisabled}
-                  onClick={() => onValueChange(!isSelected)}
-                  className="noctur-moon-button"
-                />
+              <span className="nh-route nh-muted">{t('noctur.home.ready')}</span>
+            )}
+            {routeOpen && firstGroup && (
+              <div className="noctur-card nm-servers">
+                <GroupNodes group={firstGroup} groups={groups} live={live} />
               </div>
             )}
-            <span key={status} className="noctur-state noctur-fade">
-              {status}
-            </span>
-            <p className="noctur-substate flag-emoji">
-              {showConnectedTimer ? (
-                <>
-                  {t('noctur.home.through', { node: firstGroup?.now || firstGroup?.name || '' })}{' '}
-                  <span className="noctur-fixed">
-                    <ConnectedTimer active={isSelected} />
-                  </span>
-                </>
-              ) : !loading && currentProfile ? (
-                t('noctur.home.ready', { profile: currentProfile.name })
-              ) : (
-                '\u00a0'
-              )}
-            </p>
-            <div className="noctur-pills">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="noctur-chip acc noctur-chip-btn"
-                    disabled={loading}
-                    aria-label={t('noctur.home.method')}
-                  >
-                    {mainSwitchMode === 'tun' ? t('noctur.tun') : t('noctur.sysProxyShort')}
-                    <ChevronDown className="size-3" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="center">
-                  <DropdownMenuRadioGroup value={mainSwitchMode} onValueChange={changeMethod}>
-                    <DropdownMenuRadioItem value="tun">
-                      {t('noctur.tun')}
-                      <span className="noctur-method-hint">{t('noctur.home.tunHint')}</span>
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="sysproxy" disabled={isSelected && proxyUnusable}>
-                      {t('noctur.sysProxyShort')}
-                      <span className="noctur-method-hint">{t('noctur.home.proxyHint')}</span>
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              {showConnectedTimer && (
-                <span
-                  className="noctur-chip mono noctur-fixed"
-                  title={`↓ ${fixedBytes(trafficInfo.downTotal)} · ↑ ${fixedBytes(trafficInfo.upTotal)}`}
-                >
-                  ↓ {fixedBytes(trafficInfo.down, true)} · ↑ {fixedBytes(trafficInfo.up, true)}
+            <button
+              type="button"
+              data-guide="home-power-toggle"
+              disabled={conn.disabled}
+              onClick={conn.toggle}
+              className={`nh-connect nm-connect${conn.connected && !conn.busy ? '' : ' primary'}`}
+            >
+              {conn.busy && <Spinner className="size-4" />}
+              {(conn.busy ? conn.busy === 'connecting' : !conn.connected)
+                ? t('noctur.home.connect')
+                : t('noctur.home.disconnect')}
+            </button>
+            {!homeTraffic && (
+              <div className="nm-line noctur-fixed">
+                <span>
+                  <i className="down">↓</i>
+                  {fixedBytes(live ? trafficNow.down : 0, true)}
                 </span>
-              )}
+                <span>
+                  <i className="up">↑</i>
+                  {fixedBytes(live ? trafficNow.up : 0, true)}
+                </span>
+                <span>{conn.method === 'tun' ? t('noctur.tun') : t('noctur.sysProxyShort')}</span>
+              </div>
+            )}
+          </div>
+          <HomeTiles
+            live={live}
+            global={global}
+            server={route?.server.name ?? ''}
+            traffic={homeTraffic}
+          />
+        </div>
+      ) : (
+        <div className="nh">
+          {planCard}
+
+          {/* The connection: state and time, the route to the server in use, the session, Connect */}
+          <section className="nh-status">
+            <div className="nh-status-title">
+              <span className={`nh-dot${live ? ' on' : ''}`} />
+              <span key={status} className="noctur-fade">
+                {status}
+              </span>
+              {live && <ConnectedTimer active={live} />}
             </div>
-            {!calm && (
+            {route ? (
               <button
                 type="button"
-                disabled={isDisabled}
-                onClick={() => onValueChange(!isSelected)}
-                data-guide="home-power-toggle"
-                className={`noctur-connect${isSelected && !loading ? ' on' : ''}${loading ? ' busy' : ''}`}
+                className="nh-route flag-emoji"
+                title={t('noctur.home.showServers')}
+                aria-expanded={routeOpen}
+                onClick={() => setRouteOpen((o) => !o)}
               >
-                {loading && <Spinner className="size-4" />}
-                {(loading ? loadingDirection === 'connecting' : !isSelected)
-                  ? t('noctur.home.connect')
-                  : t('noctur.home.disconnect')}
+                {routeNames}
+                <span className="nh-route-meta">
+                  {'· '}
+                  {serverType && <>{serverType} · </>}
+                  <Delay ms={delayFor(route.server.name, route.server.delay, memory)} live={live} />
+                </span>
+                <ChevronDown className="nh-route-chev" strokeWidth={2} aria-hidden />
               </button>
+            ) : (
+              <span className="nh-route nh-muted">{t('noctur.home.ready')}</span>
             )}
-          </div>
+            <button
+              type="button"
+              data-guide="home-power-toggle"
+              disabled={conn.disabled}
+              onClick={conn.toggle}
+              className={`nh-connect${conn.connected && !conn.busy ? '' : ' primary'}`}
+            >
+              {conn.busy && <Spinner className="size-4" />}
+              {(conn.busy ? conn.busy === 'connecting' : !conn.connected)
+                ? t('noctur.home.connect')
+                : t('noctur.home.disconnect')}
+            </button>
+          </section>
 
-          {/* Selected node of the first group, and the provider's support link */}
-          <div className="noctur-home-foot">
-            {firstGroup && (
-              <NodePicker group={firstGroup}>
-                <button
-                  type="button"
-                  data-guide="home-group-selector"
-                  className="noctur-card noctur-node flag-emoji"
-                >
-                  <div className="noctur-node-name min-w-0 grow text-left">
-                    {firstGroup.now || firstGroup.name}
-                  </div>
-                  {firstDelay >= 0 && (
-                    <span className={`noctur-delay ${delayClass}`}>
-                      {firstDelay === 0 ? 'timeout' : `${firstDelay} ms`}
-                    </span>
-                  )}
-                  <ChevronRight className="size-4 text-muted-foreground" />
-                </button>
-              </NodePicker>
-            )}
-          </div>
+          {/* The first group's servers, opened from the route line */}
+          {routeOpen && firstGroup && (
+            <div className="noctur-card">
+              <GroupNodes group={firstGroup} groups={groups} live={live} />
+            </div>
+          )}
+
+          <HomeTiles
+            live={live}
+            global={global}
+            server={route?.server.name ?? ''}
+            traffic={homeTraffic}
+          />
+
+          {groups.length > 0 &&
+            (homeGroups === 'tiles' ? (
+              <HomeGroups groups={groups} live={live} layout="tiles" />
+            ) : (
+              <div className="nh-cols">
+                <HomeGroups groups={groups} live={live} layout="list" />
+                {/* As tall as the list: list rows are 40 px, app rows about 38 */}
+                <TopApps limit={Math.max(4, Math.min(12, Math.floor(groups.length * 1.05)))} />
+              </div>
+            ))}
         </div>
       )}
     </BasePage>

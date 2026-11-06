@@ -128,6 +128,7 @@ import { getAppName } from './appName'
 import { getUserAgent } from './userAgent'
 import { setLanguage } from './i18n'
 import { updateApplicationMenu } from '../resolve/menu'
+import { lookUpAddress } from '../noctur/address'
 import {
   coreState,
   downloadCore,
@@ -176,6 +177,12 @@ export function registerIpcMainHandlers(): void {
     ipcErrorWrapper(useDownloadedCore)(version)
   )
   ipcMain.handle('nocturRemoveCore', (_e, version) => ipcErrorWrapper(removeCore)(version))
+  // Noctur: the Home address tiles (noctur/address.ts)
+  ipcMain.handle('nocturAddress', (_e, kind) =>
+    ipcErrorWrapper(lookUpAddress)(
+      ['proxied', 'direct6', 'proxied6'].includes(kind) ? kind : 'direct'
+    )
+  )
   ipcMain.handle('mihomoProxyProviders', ipcErrorWrapper(mihomoProxyProviders))
   ipcMain.handle('mihomoUpdateProxyProviders', (_e, name) =>
     ipcErrorWrapper(mihomoUpdateProxyProviders)(name)
@@ -234,11 +241,11 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('triggerSysProxy', (_e, enable, onlyActiveDevice) =>
     ipcErrorWrapper(triggerSysProxy)(enable, onlyActiveDevice)
   )
-  ipcMain.handle('manualGrantCorePermition', (_e, cores?: ('mihomo')[]) =>
+  ipcMain.handle('manualGrantCorePermition', (_e, cores?: 'mihomo'[]) =>
     ipcErrorWrapper(manualGrantCorePermition)(cores)
   )
   ipcMain.handle('checkCorePermission', () => ipcErrorWrapper(checkCorePermission)())
-  ipcMain.handle('revokeCorePermission', (_e, cores?: ('mihomo')[]) =>
+  ipcMain.handle('revokeCorePermission', (_e, cores?: 'mihomo'[]) =>
     ipcErrorWrapper(revokeCorePermission)(cores)
   )
   ipcMain.handle('checkElevateTask', () => ipcErrorWrapper(checkElevateTask)())
@@ -374,8 +381,8 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('restartAsAdmin', async () => {
     if (process.platform !== 'win32') return false
     // Noctur: ask for the elevated start while this window is in front, and quit only after it
-    // succeeded (noctur/admin-relaunch.ts). Upstream quit first and asked from a hidden background
-    // process; on the owner's PC that left nothing running.
+    // succeeded (noctur/admin-relaunch.ts). Quitting first and asking from a hidden background
+    // process can leave nothing running.
     const log = (line: string): Promise<void> =>
       appendFile(logPath(), `[Elevation]: ${line}\n`).catch(() => {})
     const { execFile } = await import('child_process')

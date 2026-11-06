@@ -20,6 +20,16 @@ import { getHWID, getDeviceOS, getOSVersion, getDeviceModel } from '../utils/dev
 import { t } from '../utils/i18n'
 import { downloadCustomCss } from '../resolve/theme'
 
+// Noctur: profile-update-interval is in whole hours, up to a year. Anything else is ignored: the
+// profile would be due again on every updater tick, or never.
+const MAX_UPDATE_INTERVAL_HOURS = 8760
+
+export function parseUpdateInterval(value: unknown): number | undefined {
+  if (typeof value !== 'string' || !/^\d+$/.test(value.trim())) return undefined
+  const hours = Number(value)
+  return hours > 0 && hours <= MAX_UPDATE_INTERVAL_HOURS ? hours * 60 : undefined
+}
+
 let profileConfig: ProfileConfig // profile.yaml
 
 export async function getProfileConfig(force = false): Promise<ProfileConfig> {
@@ -379,8 +389,9 @@ export async function createProfile(item: Partial<ProfileItem>): Promise<Profile
         k.toLowerCase().endsWith('profile-update-interval')
       )
       if (intervalKey) {
-        newItem.interval = parseInt(headers[intervalKey]) * 60
-        if (newItem.interval) {
+        const interval = parseUpdateInterval(headers[intervalKey])
+        if (interval !== undefined) {
+          newItem.interval = interval
           newItem.locked = true
         }
       }

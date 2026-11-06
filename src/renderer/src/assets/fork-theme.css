@@ -54,8 +54,8 @@
   --sidebar-ring: var(--p-accent);
 }
 
-/* Background: glows drift slowly, 22 to 31 seconds per pass. Transform only, so the GPU
-   composites them without repainting. Stopped when macOS "Reduce motion" is on. */
+/* Background (noctur/background.tsx): one of Paper's shaders, smooth or as dots, on a canvas that
+   Paper puts inside this element, or the plain page color ('flat'). */
 .noctur-backdrop {
   position: absolute;
   inset: 0;
@@ -64,82 +64,59 @@
   pointer-events: none;
   background: var(--p-bg);
 }
-.noctur-glow {
-  position: absolute;
-  width: 70%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  filter: blur(64px);
-  will-change: transform;
+
+/* Settings, Appearance: a live preview of each background kind, the chosen one outlined. */
+.noctur-bg-choices {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
 }
-.noctur-glow.g1 {
-  background: var(--p-glow1);
-  top: -30%;
-  left: -15%;
-  opacity: 0.75;
-  animation: noctur-drift1 22s ease-in-out infinite alternate;
+.noctur-bg-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
 }
-.noctur-glow.g2 {
-  background: var(--p-glow2);
-  bottom: -40%;
-  right: -20%;
-  opacity: 0.85;
-  animation: noctur-drift2 28s ease-in-out infinite alternate;
+.noctur-bg-preview {
+  position: relative;
+  width: 112px;
+  height: 70px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--noctur-line);
+  transition: box-shadow 0.15s;
 }
-.noctur-glow.g3 {
-  background: var(--p-glow3);
-  width: 55%;
-  top: 20%;
-  left: 35%;
-  opacity: 0.9;
-  animation: noctur-drift3 26s ease-in-out infinite alternate;
+.noctur-bg-choice:hover .noctur-bg-preview {
+  box-shadow: 0 0 0 1px var(--p-fg3, var(--muted-foreground));
 }
-.noctur-glow.g4 {
-  background: var(--p-glow4);
-  width: 50%;
-  top: -25%;
-  right: -10%;
-  opacity: 0.9;
-  animation: noctur-drift4 31s ease-in-out infinite alternate;
+.noctur-bg-choice[aria-checked='true'] .noctur-bg-preview {
+  box-shadow: 0 0 0 2px var(--noctur-accent);
 }
-.noctur-stars {
+.noctur-bg-choice:focus-visible {
+  outline: none;
+}
+.noctur-bg-choice:focus-visible .noctur-bg-preview {
+  box-shadow:
+    0 0 0 2px var(--noctur-accent),
+    0 0 0 4px var(--noctur-soft);
+}
+.noctur-bg-preview-art {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
+  background: var(--p-bg);
 }
-@keyframes noctur-drift1 {
-  to {
-    transform: translate(35%, 25%) scale(1.1);
-  }
+.noctur-bg-name {
+  font-size: 12px;
+  color: var(--p-fg2, var(--muted-foreground));
 }
-@keyframes noctur-drift2 {
-  to {
-    transform: translate(-30%, -20%) scale(0.9);
-  }
-}
-@keyframes noctur-drift3 {
-  to {
-    transform: translate(-25%, 15%) scale(1.15);
-  }
-}
-@keyframes noctur-drift4 {
-  to {
-    transform: translate(-20%, 30%) scale(0.85);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .noctur-glow {
-    animation: none;
-  }
-}
-/* The Calm look: the glows stay where they are (the stars are drawn once by the worker). */
-.noctur-backdrop.still .noctur-glow {
-  animation: none;
+.noctur-bg-choice[aria-checked='true'] .noctur-bg-name {
+  color: var(--p-fg, var(--foreground));
 }
 
 /* ---------------------------------------------------------------------------------------------
-   Noctur layout (design/mockup.html). Colors use the app tokens (--background, --foreground,
+   Noctur layout. Colors use the app tokens (--background, --foreground,
    --primary, ...), which the palette sets, so the layout also works with an imported custom theme. */
 
 :root {
@@ -162,7 +139,7 @@
 /* Profile cards: the muted grey (--p-fg3) reached about 4:1 on the cards and 1.5:1 (dark) to
    2.4:1 (light) on the selected card, whose accent tint is much lighter than the page. Other cards
    use the second grey (about 7:1 dark, 6.5:1 light); the selected card uses the text color at 90%,
-   which keeps about 4.7:1 on the tint (owner, 2026-10-11). Labels, the update time and the icons. */
+   which keeps about 4.7:1 on the tint. Labels, the update time and the icons. */
 .noctur-profile .text-muted-foreground {
   color: var(--noctur-fg2);
 }
@@ -269,50 +246,6 @@
   background: var(--noctur-glass-strong);
   box-shadow: 0 1px 0 var(--noctur-line-strong);
 }
-.noctur-status {
-  display: grid;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 12px;
-  border: 1px solid var(--noctur-line);
-  background: color-mix(in srgb, var(--foreground) 3%, transparent);
-}
-.noctur-status-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
-  font-weight: 600;
-}
-.noctur-status-top .noctur-chip {
-  margin-left: auto;
-  height: 19px;
-  flex: none;
-}
-.noctur-status-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.noctur-status-rate {
-  display: flex;
-  justify-content: space-between;
-  font: 500 11px var(--font-mono);
-  color: var(--noctur-fg2);
-}
-.noctur-dot {
-  width: 8px;
-  height: 8px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--muted-foreground);
-}
-.noctur-dot.on {
-  background: var(--noctur-ok);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--noctur-ok) 25%, transparent);
-}
-
 /* Shared pieces */
 .noctur-card {
   border-radius: 14px;
@@ -358,26 +291,6 @@
   background: linear-gradient(140deg, var(--noctur-accent), var(--noctur-accent2));
   color: var(--noctur-on);
   font-weight: 600;
-}
-.noctur-ib {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  color: var(--muted-foreground);
-  cursor: pointer;
-}
-.noctur-ib:hover {
-  color: var(--foreground);
-  background: color-mix(in srgb, var(--foreground) 7%, transparent);
-}
-.noctur-ib.sm {
-  width: 26px;
-  height: 26px;
-}
-.noctur-ib:disabled {
-  opacity: 0.5;
 }
 
 /* Page header and content */
@@ -455,21 +368,8 @@
   color: var(--muted-foreground);
 }
 
-/* Home */
-.noctur-home {
-  height: 100%;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 12px;
-  /* Same margin on every side: 22 px strip on top, 8 + 14 px at the sides, 22 px at the bottom. */
-  padding: 0 8px 22px;
-}
-.noctur-home-top {
-  display: grid;
-  gap: 10px;
-}
-/* The update line under the subscription card (noctur/update-line.tsx): plain text on the sky, the
-   app's moon, and one small button (owner, 2026-10-11: a line, no capsule, plainly about the app). */
+/* The update line under the subscription card (noctur/update-line.tsx): plain text on the page, the
+   app's moon, and one small button, with no capsule around it. The button is a small Connect button (.nh-connect.primary): the page's text color, 7 px corners. */
 .noctur-update {
   display: flex;
   flex-wrap: wrap;
@@ -507,23 +407,36 @@
 }
 .noctur-update-btn {
   height: 26px;
-  padding: 0 13px;
-  border-radius: 999px;
-  background: linear-gradient(140deg, var(--noctur-accent), var(--noctur-accent2));
-  color: var(--noctur-on);
+  padding: 0 12px;
+  border-radius: 7px;
+  background: var(--p-fg, var(--foreground));
+  color: var(--p-bg, var(--background));
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
+  transition:
+    background-color 0.15s,
+    transform 0.15s;
 }
 .noctur-update-btn:hover {
-  filter: brightness(1.06);
+  background: color-mix(
+    in srgb,
+    var(--p-fg, var(--foreground)) 88%,
+    var(--p-bg, var(--background))
+  );
 }
-.noctur-update-link:focus-visible,
+.noctur-update-btn:active {
+  transform: scale(0.98);
+}
+.noctur-update-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 .noctur-update-btn:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
-  border-radius: 999px;
 }
 .noctur-update-bar {
   position: relative;
@@ -531,7 +444,7 @@
   height: 4px;
   border-radius: 999px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--foreground) 16%, transparent);
+  background: color-mix(in srgb, var(--foreground) 14%, transparent);
 }
 .noctur-update-bar i {
   position: absolute;
@@ -543,33 +456,6 @@
 .noctur-update-pct {
   font: 500 11.5px var(--font-mono);
   color: var(--noctur-fg2);
-}
-/* Light Noctur: the line sits on the deep top of Home's twilight, where the light theme's navy text
-   reached only 1.9:1. White text (5:1 to 5.9:1), links at 92% (4.6:1 where the glow is brightest),
-   and a white button. */
-:root[data-palette='noctur']:not(.dark) .noctur-update {
-  color: #ffffff;
-}
-:root[data-palette='noctur']:not(.dark) .noctur-update .noctur-update-link,
-:root[data-palette='noctur']:not(.dark) .noctur-update .noctur-update-pct {
-  color: rgba(255, 255, 255, 0.92);
-}
-:root[data-palette='noctur']:not(.dark) .noctur-update .noctur-update-link:hover,
-:root[data-palette='noctur']:not(.dark) .noctur-update .noctur-update-link[data-state='open'] {
-  color: #ffffff;
-}
-:root[data-palette='noctur']:not(.dark) .noctur-update .noctur-update-btn {
-  background: #ffffff;
-  color: var(--p-fg);
-}
-:root[data-palette='noctur']:not(.dark) .noctur-update .noctur-update-bar {
-  background: rgba(255, 255, 255, 0.28);
-}
-:root[data-palette='noctur']:not(.dark) .noctur-update .noctur-update-bar i {
-  background: #ffffff;
-}
-:root[data-palette='noctur']:not(.dark) .noctur-update .noctur-update-warn {
-  color: #fde68a;
 }
 .noctur-update-notes {
   width: 340px;
@@ -611,61 +497,6 @@
   align-items: center;
   margin-top: 12px;
 }
-.noctur-prof {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 18px;
-  padding: 14px 18px;
-}
-.noctur-prof-id {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.noctur-logo {
-  width: 38px;
-  height: 38px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  border-radius: 11px;
-  object-fit: cover;
-  font-weight: 700;
-  background: linear-gradient(140deg, var(--noctur-accent), var(--noctur-accent2));
-  color: var(--noctur-on);
-}
-.noctur-prof-name {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 15px;
-  font-weight: 700;
-}
-.noctur-prof-note {
-  font-size: 12px;
-  color: var(--muted-foreground);
-  white-space: pre-line;
-}
-.noctur-stat {
-  display: grid;
-  gap: 2px;
-  min-width: 92px;
-  padding-left: 18px;
-  border-left: 1px solid var(--noctur-line);
-}
-.noctur-stat span {
-  font-size: 11.5px;
-  color: var(--noctur-fg2);
-}
-.noctur-stat b {
-  display: flex;
-  align-items: center;
-  font-size: 15px;
-  font-weight: 600;
-}
 .noctur-expiry {
   display: flex;
   align-items: center;
@@ -692,130 +523,6 @@
   font-size: 12px;
   color: var(--muted-foreground);
 }
-.noctur-home-center {
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 14px;
-  min-height: 0;
-}
-/* The eclipse (noctur/eclipse.tsx). Its box is larger than the moon so the corona has room; the
-   negative margins keep the moon close to the state below it. */
-.noctur-eclipse {
-  position: relative;
-  width: 340px;
-  height: 340px;
-  margin: -54px 0 -84px;
-  flex: none;
-}
-.noctur-eclipse-art {
-  display: block;
-  width: 100%;
-  height: 100%;
-  transition: filter 0.2s;
-}
-/* The moon is a connect and disconnect switch too: a round button over the moon's disc (center
-   50, 48 and radius 26.9 in the eclipse's 100 by 100 drawing), so the corona around it is not. */
-.noctur-moon-button {
-  position: absolute;
-  left: 23.1%;
-  top: 21.1%;
-  width: 53.8%;
-  height: 53.8%;
-  border-radius: 50%;
-  cursor: pointer;
-}
-.noctur-moon-button:disabled {
-  cursor: default;
-}
-.noctur-eclipse:has(.noctur-moon-button:hover:not(:disabled)) .noctur-eclipse-art {
-  filter: brightness(1.12);
-}
-@media (max-height: 700px) {
-  .noctur-eclipse {
-    width: 270px;
-    height: 270px;
-    margin: -44px 0 -68px;
-  }
-}
-:root:not(.dark) .noctur-eclipse {
-  filter: drop-shadow(0 14px 34px rgb(30 61 115 / 0.28));
-}
-/* The Calm look's switch: Astra Clash 1.0.6's power button. Off it is the panels' glass with a top
-   highlight; on it is the accent gradient with a soft ring and glow. Only transform and color
-   animate; the glow is a separate layer that fades. */
-.noctur-power {
-  position: relative;
-  isolation: isolate;
-  width: 148px;
-  height: 148px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--noctur-fg2);
-  background: var(--noctur-glass);
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.16),
-    inset 0 0 0 1px var(--noctur-line-strong),
-    0 12px 32px rgb(0 0 0 / 0.28);
-  transition:
-    transform 0.25s,
-    color 0.3s;
-  cursor: pointer;
-}
-.noctur-power::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 8px var(--noctur-soft),
-    0 0 70px var(--p-glow1, var(--noctur-soft));
-  opacity: 0;
-  transition: opacity 0.4s;
-  will-change: opacity;
-}
-.noctur-power.on::before {
-  opacity: 1;
-}
-.noctur-power:hover:not(:disabled) {
-  transform: scale(1.03);
-}
-.noctur-power:disabled {
-  cursor: default;
-}
-/* Light: the accent tints the rim and icon; the shadow stays. */
-:root:not(.dark) .noctur-power:not(.on) {
-  color: color-mix(in srgb, var(--noctur-accent) 75%, var(--foreground));
-  background:
-    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--noctur-accent) 22%, transparent), transparent 62%),
-    var(--noctur-glass);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.18),
-    0 0 0 1px color-mix(in srgb, var(--noctur-accent) 38%, transparent),
-    0 12px 32px rgb(0 0 0 / 0.28);
-}
-.noctur-power.on {
-  color: var(--noctur-on);
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.22), rgb(255 255 255 / 0) 52%),
-    linear-gradient(140deg, var(--noctur-accent), var(--noctur-accent2));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4);
-}
-.noctur-power.busy {
-  transform: scale(0.95);
-}
-.noctur-state {
-  height: 28px;
-  line-height: 28px;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
 /* The state changes with a short fade. */
 .noctur-fade {
   animation: noctur-fade 0.25s ease-out;
@@ -830,170 +537,6 @@
     animation: none;
   }
 }
-.noctur-substate {
-  margin: -8px 0 0;
-  min-height: 20px;
-  font-size: 13px;
-  color: var(--noctur-fg2);
-}
-.noctur-substate .noctur-fixed {
-  font: 500 13px var(--font-mono);
-}
-.noctur-pills {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-}
-/* The method chip opens a menu with TUN and System Proxy. */
-.noctur-chip-btn {
-  gap: 4px;
-  cursor: pointer;
-}
-.noctur-chip-btn:hover:not(:disabled) {
-  border-color: var(--noctur-accent);
-}
-.noctur-chip-btn:disabled {
-  cursor: default;
-  opacity: 0.7;
-}
-.noctur-method-hint {
-  margin-left: auto;
-  padding-left: 16px;
-  font-size: 12px;
-  color: var(--muted-foreground);
-}
-/* Connect is the strong button (the text color filled); Disconnect, and the busy state, are glass. */
-.noctur-connect {
-  margin-top: 4px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 30px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  background: var(--foreground);
-  color: var(--background);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 0.3s,
-    color 0.3s,
-    border-color 0.3s;
-}
-.noctur-connect.on,
-.noctur-connect.busy {
-  background: color-mix(in srgb, var(--foreground) 12%, transparent);
-  border-color: color-mix(in srgb, var(--foreground) 16%, transparent);
-  color: var(--foreground);
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
-}
-:root:not(.dark) .noctur-connect.on,
-:root:not(.dark) .noctur-connect.busy {
-  background: rgb(255 255 255 / 0.75);
-  border-color: color-mix(in srgb, var(--foreground) 12%, transparent);
-}
-.noctur-connect:hover:not(:disabled) {
-  filter: brightness(1.06);
-}
-.noctur-connect:disabled {
-  cursor: default;
-}
-/* Usage bar under the subscription numbers. */
-.noctur-usage {
-  flex-basis: 100%;
-  display: grid;
-  gap: 6px;
-}
-.noctur-usage-bar {
-  height: 5px;
-  border-radius: 99px;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--foreground) 10%, transparent);
-}
-.noctur-usage-bar i {
-  display: block;
-  height: 100%;
-  border-radius: 99px;
-  background: linear-gradient(90deg, var(--p-strong, var(--primary)), var(--p-accent2, var(--primary)));
-}
-:root[data-palette='noctur'] .noctur-usage-bar i {
-  background: linear-gradient(90deg, #8fa8ff, #ffc08e);
-}
-.noctur-usage-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11.5px;
-  color: var(--muted-foreground);
-}
-.noctur-home-foot {
-  display: grid;
-  justify-items: center;
-  gap: 8px;
-}
-.noctur-node {
-  width: min(460px, 100%);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
-  border-radius: 12px;
-  cursor: pointer;
-}
-.noctur-node:hover {
-  border-color: var(--noctur-line-strong);
-}
-.noctur-node-lab {
-  font-size: 11px;
-  color: var(--noctur-fg2);
-}
-.noctur-node-name {
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.noctur-delay {
-  font: 600 11.5px var(--font-mono);
-}
-.noctur-delay.ok {
-  color: var(--noctur-ok);
-}
-.noctur-delay.warn {
-  color: var(--noctur-warn);
-}
-.noctur-delay.bad {
-  color: var(--noctur-bad);
-}
-.noctur-prof-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-top: 2px;
-  font-size: 11.5px;
-  color: var(--noctur-fg2);
-  opacity: 0.8;
-}
-.noctur-prof-meta > * + *::before {
-  content: '·';
-  margin: 0 6px;
-}
-.noctur-support {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-.noctur-support:hover {
-  color: var(--foreground);
-}
-
 /* Settings */
 .noctur-settings {
   display: grid;
@@ -1067,8 +610,7 @@
   align-items: center;
   gap: 4px;
 }
-.noctur-row-label h4,
-.noctur-row-block h4 {
+.noctur-row-label h4 {
   margin: 0;
   font-size: 13px;
   font-weight: 500;
@@ -1077,19 +619,15 @@
   display: flex;
   align-items: center;
 }
-.noctur-row-block {
-  display: grid;
-  gap: 8px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--noctur-line);
-}
 
 /* Tabs (segmented controls) in the palette look: selected segment is a raised glass pill. */
 :root[data-palette] [data-slot='tabs-list'][data-variant='default'] {
   border-color: var(--noctur-line);
   background: color-mix(in srgb, var(--foreground) 6%, transparent);
 }
-:root[data-palette] [data-slot='tabs-list'][data-variant='default'] [data-slot='tabs-trigger'][data-state='active'] {
+:root[data-palette]
+  [data-slot='tabs-list'][data-variant='default']
+  [data-slot='tabs-trigger'][data-state='active'] {
   background: var(--noctur-glass-strong);
   border-color: var(--noctur-line-strong);
   color: var(--foreground);
@@ -1113,7 +651,13 @@
    (Windows has no flag emoji). On macOS use Onest for the text and Apple Color Emoji for emoji and
    flags; Twemoji stays only as a last fallback. */
 :root[data-palette] .flag-emoji {
-  font-family: 'Onest Variable', 'Apple Color Emoji', 'twemoji', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    'Onest Variable',
+    'Apple Color Emoji',
+    'twemoji',
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
 }
 
 /* Fixed-width readouts from noctur/format.ts: keep the padding spaces. */
@@ -1121,136 +665,6 @@
 .noctur-fixed span {
   white-space: pre;
   font-variant-numeric: tabular-nums;
-}
-
-/* Palette picker: compact tiles, one row per group. */
-.noctur-palette-row {
-  display: grid;
-  gap: 8px;
-}
-.noctur-palette-tile {
-  display: grid;
-  gap: 5px;
-  padding: 5px 5px 7px;
-  border-radius: 11px;
-  border: 1px solid var(--noctur-line);
-  background: color-mix(in srgb, var(--foreground) 3%, transparent);
-  text-align: left;
-  cursor: pointer;
-}
-.noctur-palette-tile:hover {
-  border-color: var(--noctur-line-strong);
-}
-.noctur-palette-tile[aria-pressed='true'] {
-  border-color: var(--noctur-accent);
-  box-shadow: 0 0 0 1px var(--noctur-soft);
-}
-.noctur-palette-swatch {
-  position: relative;
-  display: block;
-  height: 34px;
-  border-radius: 7px;
-  overflow: hidden;
-}
-.noctur-palette-swatch i {
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  width: 12px;
-  height: 12px;
-  margin-top: -6px;
-  border-radius: 50%;
-}
-.noctur-palette-more .noctur-palette-swatch {
-  display: grid;
-  place-items: center;
-  border: 1px dashed var(--noctur-line-strong);
-  font: 600 14px var(--font-mono);
-  color: var(--muted-foreground);
-}
-.noctur-palette-more .noctur-palette-name {
-  color: var(--muted-foreground);
-}
-.noctur-palette-name {
-  padding: 0 3px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-/* Shortcut recorder: compact, fixed width, same size as the row labels. */
-.noctur-shortcut {
-  width: 176px;
-  font-size: 12px;
-}
-
-/* Node picker on Home (noctur/node-picker.tsx). */
-.noctur-picker {
-  width: 360px;
-  padding: 6px;
-  border-radius: 14px;
-  border: 1px solid var(--noctur-line-strong);
-  background: var(--noctur-glass-strong);
-  -webkit-backdrop-filter: blur(30px);
-  backdrop-filter: blur(30px);
-}
-.noctur-picker-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 6px 6px 10px;
-  font: 600 11px var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--noctur-fg2);
-}
-.noctur-picker-list {
-  display: grid;
-  gap: 1px;
-  max-height: 300px;
-  overflow-y: auto;
-}
-.noctur-picker-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 7px 10px;
-  border-radius: 8px;
-  font-size: 13px;
-  color: var(--foreground);
-  cursor: pointer;
-}
-.noctur-picker-item:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--foreground) 7%, transparent);
-}
-.noctur-picker-item[aria-current='true'] {
-  background: var(--noctur-soft);
-  color: var(--noctur-text);
-}
-.noctur-picker-item:disabled {
-  cursor: default;
-}
-.noctur-picker-note {
-  padding: 6px 10px 0;
-  font-size: 11.5px;
-  color: var(--noctur-fg2);
-}
-.noctur-picker-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  margin-top: 6px;
-  padding: 8px 10px;
-  border-top: 1px solid var(--noctur-line);
-  font-size: 12px;
-  color: var(--noctur-fg2);
-  cursor: pointer;
-}
-.noctur-picker-foot:hover {
-  color: var(--foreground);
 }
 
 /* Values and buttons inside settings rows: sized to the 13 px row labels. */
@@ -1322,16 +736,6 @@ html[data-platform='win32'] .noctur-side-top {
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(18, 26, 51, 0.1);
 }
-.noctur-sky {
-  position: absolute;
-  inset: 0 0 0 224px;
-  opacity: 0;
-  transition: opacity 0.5s;
-  background: linear-gradient(180deg, #1e3d73 0%, #3a5a9e 24%, #7e97d6 46%, #c9d4f0 64%, rgba(238, 241, 248, 0) 82%);
-}
-:root[data-palette='noctur']:not(.dark) .noctur-backdrop.home .noctur-sky {
-  opacity: 1;
-}
 /* Sidebar mark: the eclipse at 22 px of moon; its box is larger for the corona. */
 .noctur-brand-mark {
   width: 34px;
@@ -1339,266 +743,1084 @@ html[data-platform='win32'] .noctur-side-top {
   margin: -6px -4px -6px -7px;
   flex: none;
 }
-/* Void is black and white: the eclipse and the sidebar mark lose their blue and amber too. */
-:root[data-palette='void'] .noctur-eclipse,
-:root[data-palette='void'] .noctur-brand-mark {
-  filter: grayscale(1);
+
+/* ---------------------------------------------------------------------------------------------
+   Interface: graphite surfaces, one accent, a moving background behind frosted cards.
+   Sizes sit on a 4 px grid; text is 12, 13, 16, 20 or 24 px at weight 400 or 500. */
+:root {
+  --nh-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --nh-ok: #4cc38a;
+}
+:root:not(.dark) {
+  --nh-ok: #16a34a;
 }
 
-/* The looks, Noctur and Calm (noctur/look-preview.tsx): two cards with a live clip each, in the
-   first-launch picker and in Settings, Appearance. The clip is a small Home; its parts are sized in
-   container units so it scales with the card. */
-.noctur-looks {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
+/* Cards are frosted glass while the background moves, and plain surfaces on a flat one. The dot
+   background gets less blur, so the dots stay dots. Prefixed property first. */
+:root[data-palette][data-bg='gradient'] .noctur-card,
+:root[data-palette][data-bg='gradient'] .noctur-content [data-slot='card'] {
+  background: color-mix(in srgb, var(--p-surface) 55%, transparent);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  border-color: color-mix(in srgb, var(--p-fg) 10%, transparent);
 }
-.noctur-look {
-  display: grid;
-  align-content: start;
-  gap: 10px;
-  padding: 8px 8px 12px;
-  border-radius: 14px;
-  border: 1px solid var(--noctur-line);
-  background: color-mix(in srgb, var(--foreground) 3%, transparent);
-  text-align: left;
-  cursor: pointer;
+:root[data-palette][data-bg='dots'] .noctur-card,
+:root[data-palette][data-bg='dots'] .noctur-content [data-slot='card'] {
+  background: color-mix(in srgb, var(--p-surface) 62%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border-color: color-mix(in srgb, var(--p-fg) 10%, transparent);
+}
+/* Dark: the raised color, lighter than the card color, and more of the background through it, so
+   the glass does not read as too dark. */
+:root.dark[data-palette][data-bg='gradient'] .noctur-card,
+:root.dark[data-palette][data-bg='gradient'] .noctur-content [data-slot='card'] {
+  background: color-mix(in srgb, var(--p-raised) 40%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  backdrop-filter: blur(24px) saturate(1.3);
+}
+:root.dark[data-palette][data-bg='dots'] .noctur-card,
+:root.dark[data-palette][data-bg='dots'] .noctur-content [data-slot='card'] {
+  background: color-mix(in srgb, var(--p-raised) 48%, transparent);
+  -webkit-backdrop-filter: blur(6px) saturate(1.3);
+  backdrop-filter: blur(6px) saturate(1.3);
+}
+:root[data-palette][data-bg='flat'] .noctur-card {
+  background: var(--p-surface);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root[data-palette]:not([data-bg='flat']) .noctur-side {
+  background: color-mix(in srgb, var(--p-surface) 58%, transparent);
+}
+:root[data-palette]:not(.dark):not([data-bg='flat']) .noctur-side {
+  background: color-mix(in srgb, var(--p-surface) 66%, transparent);
+}
+:root[data-palette][data-bg='dots'] .noctur-side {
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+:root[data-palette][data-bg='flat'] .noctur-side {
+  background: var(--p-surface);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Sidebar items: 36 px rows, 2 px apart, 16 px icons in one column. */
+.noctur-nav button {
+  min-height: 36px;
+  padding: 0 12px;
+  gap: 8px;
+  border-radius: 8px;
+  font-size: 13px;
   transition:
-    border-color 0.2s,
-    background 0.2s,
-    box-shadow 0.2s;
+    background-color 0.15s var(--nh-ease),
+    color 0.15s var(--nh-ease);
 }
-.noctur-look:hover {
-  border-color: var(--noctur-line-strong);
+.noctur-nav-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  opacity: 0.85;
 }
-.noctur-look[aria-checked='true'] {
-  --look-sel: color-mix(in srgb, var(--p-strong, var(--noctur-accent)) 70%, transparent);
-  border-color: var(--look-sel);
-  background: color-mix(in srgb, var(--p-strong, var(--noctur-accent)) 8%, transparent);
-  box-shadow: 0 0 0 1px var(--look-sel);
+.noctur-nav button[aria-current='page'] .noctur-nav-icon {
+  opacity: 1;
+  color: var(--p-strong);
 }
-.noctur-look:focus-visible {
-  outline: 2px solid var(--ring);
+.noctur-count {
+  font: 400 12px var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The connection block at the bottom of the sidebar: state and switch, TUN or Proxy, live speeds. */
+.noctur-conn {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--p-fg) 6%, transparent);
+}
+.noctur-conn-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.noctur-conn-state {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.noctur-switch {
+  flex: none;
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--p-fg) 20%, transparent);
+  cursor: pointer;
+  transition: background-color 0.18s var(--nh-ease);
+}
+.noctur-switch i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+  transition: transform 0.18s var(--nh-ease);
+}
+.noctur-switch[aria-checked='true'] {
+  background: var(--nh-ok);
+}
+.noctur-switch[aria-checked='true'] i {
+  transform: translateX(16px);
+}
+.noctur-switch.busy {
+  opacity: 0.7;
+}
+.noctur-switch:disabled {
+  cursor: default;
+}
+.noctur-switch:focus-visible {
+  outline: 2px solid var(--p-strong);
   outline-offset: 2px;
 }
-.noctur-look-text {
+.noctur-seg {
   display: grid;
-  gap: 3px;
-  padding: 0 4px;
+  grid-template-columns: 1fr 1fr;
+  padding: 2px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--p-fg) 7%, transparent);
 }
-.noctur-look-name {
+.noctur-seg button {
+  padding: 4px 0;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--p-fg2);
+  cursor: pointer;
+  transition:
+    background-color 0.15s var(--nh-ease),
+    color 0.15s var(--nh-ease);
+}
+.noctur-seg button[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--p-fg) 14%, transparent);
+  color: var(--p-fg);
+}
+.noctur-seg button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.noctur-seg button[aria-pressed='true']:disabled {
+  opacity: 1;
+}
+.noctur-conn-rate {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 16px;
+}
+.noctur-conn-rate span {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+.noctur-conn-rate i {
+  font-style: normal;
+  color: var(--p-fg3);
+}
+
+/* Home: the plan, the connection, then the proxy groups and the busiest apps. Starts 32 px from the
+   top (the 22 px window strip plus 10). */
+.nh {
+  display: grid;
+  gap: 12px;
+  padding: 10px 8px 24px;
+  font-size: 13px;
+}
+.nh-muted {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--p-fg2);
+}
+.nh-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--p-fg2);
+  cursor: pointer;
+  transition:
+    background-color 0.15s var(--nh-ease),
+    color 0.15s var(--nh-ease);
+}
+.nh-link:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--p-fg) 8%, transparent);
+  color: var(--p-fg);
+}
+.nh-link:disabled {
+  cursor: default;
+}
+.nh-underline {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--p-line-strong);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.nh-underline:hover {
+  color: var(--p-fg);
+}
+.nh-link:focus-visible,
+.nh-underline:focus-visible,
+.nh-row:focus-visible,
+.nh-node:focus-visible,
+.nh-route:focus-visible,
+.nh-connect:focus-visible {
+  outline: 2px solid var(--p-strong);
+  outline-offset: 1px;
+}
+
+/* The plan */
+.nh-plan {
+  display: grid;
+  gap: 8px;
+  padding: 12px 16px;
+}
+.nh-plan-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+}
+.nh-plan-id {
+  flex: 1 1 280px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+.nh-logo {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 40px;
+}
+.nh-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  object-fit: cover;
+}
+/* The moon's disc is 53.8% of the mark's box; this fills the 40 px slot with the disc. */
+.nh-logo-mark {
+  position: absolute;
+  left: -43%;
+  top: -39%;
+  width: 186%;
+  height: 186%;
+}
+.nh-plan-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+}
+.nh-announce {
+  white-space: pre-line;
+}
+.nh-plan-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 4px;
+}
+/* Inline-block, so a link's underline does not run under the dot before it. */
+.nh-plan-meta > * + *::before {
+  content: '·';
+  display: inline-block;
+  margin-right: 4px;
+  text-decoration: none;
+}
+.nh-plan-stat {
+  display: grid;
+  gap: 2px;
+  min-width: 112px;
+}
+.nh-plan-stat b {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.nh-pct {
+  font-weight: 400;
+  color: var(--p-fg2);
+}
+.nh-bar {
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--p-fg) 12%, transparent);
+}
+.nh-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--p-fg2);
+}
+.nh-plan .noctur-expiry {
+  padding: 0;
+}
+
+/* The connection: page information, not a card. */
+.nh-status {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'title button'
+    'route button';
+  align-items: center;
+  column-gap: 16px;
+  /* 17 px: level with the text inside the cards, which sits 1 px of border plus 16 px in. */
+  padding: 4px 17px;
+}
+.nh-status-title {
+  grid-area: title;
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 500;
 }
-.noctur-look-radio {
-  width: 15px;
-  height: 15px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 1.5px solid var(--noctur-line-strong);
-}
-.noctur-look[aria-checked='true'] .noctur-look-radio {
-  border-color: var(--p-strong, var(--noctur-accent));
-}
-.noctur-look[aria-checked='true'] .noctur-look-radio::after {
-  content: '';
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--p-strong, var(--noctur-accent));
-}
-.noctur-look-desc {
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--noctur-fg2);
-}
-.noctur-look-clip {
+.nh-status-title time {
+  /* Centered on the lowercase letters of the state (measured 2.3 px below the capitals' middle). */
   position: relative;
-  aspect-ratio: 16 / 10;
-  overflow: hidden;
-  isolation: isolate;
-  container-type: inline-size;
-  border-radius: 9px;
-  background: var(--p-bg, var(--background));
+  top: 2px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--p-fg2);
+  font-variant-numeric: tabular-nums;
 }
-.noctur-look-clip .noctur-glow {
-  filter: blur(22px);
+.nh-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--p-fg3);
 }
-.noctur-look-clip.still .noctur-glow {
-  animation: none;
+.nh-dot.on {
+  background: var(--nh-ok);
 }
-.noctur-look-sky {
-  position: absolute;
-  inset: 0 0 0 17%;
-  opacity: 0;
-  background: linear-gradient(180deg, #1e3d73 0%, #3a5a9e 24%, #7e97d6 46%, #c9d4f0 64%, rgba(238, 241, 248, 0) 82%);
-}
-:root[data-palette='noctur']:not(.dark) .noctur-look-sky {
-  opacity: 1;
-}
-.noctur-look-side {
-  position: absolute;
-  z-index: 2;
-  inset: 0 auto 0 0;
-  width: 17%;
-  display: grid;
-  align-content: start;
-  gap: 1.6cqw;
-  padding: 9cqw 2.5cqw 0;
-  background: var(--noctur-glass);
-  border-right: 1px solid var(--noctur-line);
-}
-.noctur-look-side i {
-  display: block;
-  height: 1.1cqw;
-  border-radius: 1cqw;
-  background: color-mix(in srgb, var(--foreground) 14%, transparent);
-}
-.noctur-look-side i:first-child {
-  height: 2.2cqw;
-  background: var(--noctur-soft);
-}
-.noctur-look-center {
-  position: absolute;
-  z-index: 1;
-  inset: 0 0 0 17%;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 1.2cqw;
-}
-.noctur-look-eclipse {
-  display: block;
-  width: 48cqw;
-  height: 48cqw;
-  margin: -8cqw 0 -11cqw;
-}
-.noctur-look-state {
-  font-size: 4.2cqw;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.noctur-look-btn {
-  margin-top: 1cqw;
-  display: grid;
-  place-items: center;
-  height: 6.6cqw;
-  padding: 0 4.6cqw;
-  border-radius: 999px;
-  font-size: 3.1cqw;
-  font-weight: 600;
-  background: var(--foreground);
-  color: var(--background);
-  transition:
-    background 0.3s,
-    color 0.3s;
-}
-.noctur-look-btn.on {
-  background: color-mix(in srgb, var(--foreground) 12%, transparent);
-  color: var(--foreground);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 16%, transparent);
-}
-.noctur-power.sm {
-  width: 21cqw;
-  height: 21cqw;
-  margin-bottom: 1.5cqw;
-  cursor: default;
-}
-.noctur-power.sm::before {
-  box-shadow:
-    0 0 0 1.4cqw var(--noctur-soft),
-    0 0 10cqw var(--p-glow1, var(--noctur-soft));
-}
-.noctur-power.sm svg {
-  width: 7.5cqw;
-  height: 7.5cqw;
-}
-:root[data-palette='void'] .noctur-look-clip:not([data-palette-preview]) .noctur-look-eclipse,
-:root[data-palette='void'] .noctur-look-mark {
-  filter: grayscale(1);
-}
-/* The first-launch picker */
-.noctur-look-head {
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-  text-align: center;
-}
-.noctur-look-mark {
-  width: 64px;
-  height: 64px;
-  margin: -10px 0 -6px;
-}
-.noctur-look-head [data-slot='dialog-title'] {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
-}
-.noctur-look-foot {
+.nh-route {
+  grid-area: route;
+  justify-self: start;
+  max-width: 100%;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin: 0 -6px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--p-fg2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s var(--nh-ease);
 }
-.noctur-look-foot .noctur-connect {
-  margin: 0;
+.nh-route:hover {
+  background: color-mix(in srgb, var(--p-fg) 6%, transparent);
 }
-/* Settings, Appearance: Look and Palette share one row, two tiles each, all the same size. Below
-   about 500 px they stack. */
-.noctur-look-palette {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px 20px;
+.nh-route b {
+  font-weight: 500;
+  color: var(--p-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.noctur-look-palette > div {
-  display: grid;
-  align-content: start;
+.nh-hint,
+.nh-route-meta {
+  color: var(--p-fg3);
+}
+.nh-route-meta {
+  font-variant-numeric: tabular-nums;
+}
+/* Over a moving dark background the status text is brighter and outlined, so it stays readable
+   where a light part passes under it. */
+:root.dark[data-palette]:not([data-bg='flat']) .nh-route,
+:root.dark[data-palette]:not([data-bg='flat']) .nh-status-title time,
+:root.dark[data-palette]:not([data-bg='flat']) .nh-hint,
+:root.dark[data-palette]:not([data-bg='flat']) .nh-route-meta,
+:root.dark[data-palette]:not([data-bg='flat']) .nh-route-meta .nh-ms {
+  color: #ececee;
+  text-shadow:
+    0 0 1px rgb(0 0 0 / 0.9),
+    0 0 3px rgb(0 0 0 / 0.75),
+    0 1px 2px rgb(0 0 0 / 0.6);
+}
+/* The delay keeps its color there; the outline stays. */
+:root.dark[data-palette]:not([data-bg='flat']) .nh-route-meta .nh-ms.good {
+  color: var(--noctur-ok);
+}
+:root.dark[data-palette]:not([data-bg='flat']) .nh-route-meta .nh-ms.slow {
+  color: var(--noctur-warn);
+}
+:root.dark[data-palette]:not([data-bg='flat']) .nh-route-meta .nh-ms.bad,
+:root.dark[data-palette]:not([data-bg='flat']) .nh-route-meta .nh-ms.nh-timeout {
+  color: var(--noctur-bad);
+}
+:root.dark[data-palette]:not([data-bg='flat']) .nh-route b {
+  color: #ffffff;
+}
+:root:not(.dark)[data-palette]:not([data-bg='flat']) .nh-route {
+  color: #27272a;
+}
+/* Connect is the off-white button; Disconnect is frosted, so the background does not show through. */
+.nh-connect {
+  grid-area: button;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
+  /* Wide enough for Connect, Disconnect and the spinner in every language, so it never resizes. */
+  min-width: 128px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--p-line-strong);
+  background: color-mix(in srgb, var(--p-surface) 80%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: blur(24px) saturate(1.4);
+  color: var(--p-fg);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.15s var(--nh-ease),
+    transform 0.15s var(--nh-ease);
+}
+.nh-connect:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--p-raised) 90%, transparent);
+}
+.nh-connect:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.nh-connect.primary {
+  border-color: transparent;
+  background: var(--p-fg);
+  color: var(--p-bg);
+}
+.nh-connect.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--p-fg) 88%, var(--p-bg));
+}
+.nh-connect:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* Proxy groups and the busiest apps */
+.nh-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 2fr);
+  gap: 12px;
+  align-items: stretch;
+}
+.nh-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 4px 8px 4px 16px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.nh-rows {
+  padding: 0 4px 8px;
+}
+.nh-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  /* Compact: 40 px rows, 24 px icons. */
+  min-height: 40px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s var(--nh-ease);
+}
+.nh-row:hover,
+.nh-row[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--p-fg) 6%, transparent);
+}
+.nh-row-text {
+  display: grid;
   min-width: 0;
 }
-.noctur-look-tiles {
+.nh-row-text > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nh-row-text > span:first-child {
+  font-weight: 500;
+  line-height: 18px;
+}
+.nh-row-text > .nh-muted {
+  line-height: 15px;
+}
+.nh-ico {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--p-fg) 8%, transparent);
+  color: var(--p-fg2);
+  object-fit: cover;
+}
+img.nh-ico {
+  background: none;
+}
+.nh-ico svg {
+  width: 16px;
+  height: 16px;
+}
+.nh-ms {
+  font-size: 12px;
+  color: var(--p-fg2);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* Delay colors (noctur/delay-tone.ts): green below 200 ms, orange to 350 ms, red above; a timeout is a
+   red label on a red tint, so it reads as one at a glance. */
+.nh-ms.good {
+  color: var(--noctur-ok);
+}
+.nh-ms.slow {
+  color: var(--noctur-warn);
+}
+.nh-ms.bad {
+  color: var(--noctur-bad);
+}
+.nh-ms.nh-timeout {
+  padding: 0 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--noctur-bad);
+  background: color-mix(in srgb, var(--noctur-bad) 16%, transparent);
+}
+.nh-nodes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  /* Under the group's name: 4 + 12 + 24 + 10 px in. */
+  padding: 2px 8px 8px 50px;
+}
+.nh-node {
+  display: flex;
+  justify-content: space-between;
   gap: 8px;
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--p-fg2);
+  text-align: left;
+  cursor: pointer;
 }
-.noctur-look-tile .noctur-look-clip {
-  border-radius: 7px;
+.nh-node span:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.noctur-look-tile[aria-checked='true'] {
-  border-color: var(--noctur-accent);
-  box-shadow: 0 0 0 1px var(--noctur-soft);
+.nh-node:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--p-fg) 6%, transparent);
 }
-.noctur-look-palette .noctur-palette-swatch {
-  height: auto;
-  aspect-ratio: 16 / 10;
+.nh-node:disabled {
+  cursor: default;
 }
-.noctur-palette-tile .noctur-look-clip {
-  border-radius: 7px;
-}
-/* A preview drawn in another palette than the one in use (the palette tiles): the tokens derived
-   from --p-* are declared again here, so they use this element's palette and not the page's. */
-.noctur-look-clip[data-palette-preview] {
-  --background: var(--p-bg);
-  --foreground: var(--p-fg);
-  --noctur-accent: var(--p-accent);
-  --noctur-accent2: var(--p-accent2);
-  --noctur-on: var(--p-on);
-  --noctur-soft: color-mix(in srgb, var(--p-accent) 15%, transparent);
-  --noctur-glass: color-mix(in srgb, var(--p-surface) 60%, transparent);
-  --noctur-line: var(--p-line);
-  --noctur-line-strong: var(--p-line-strong);
-  --noctur-fg2: var(--p-fg2);
+.nh-node[aria-current='true'] {
+  background: color-mix(in srgb, var(--p-fg) 11%, transparent);
   color: var(--p-fg);
 }
-:root .noctur-look-clip[data-twilight='true'] .noctur-look-sky {
-  opacity: 1;
+/* Rows may shrink below their text, so a long app name ends in … instead of pushing the sizes out
+   of the card (a grid item does not shrink below its content by default). */
+.nh-applist {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding: 4px 16px 16px;
 }
-:root .noctur-look-clip[data-twilight='false'] .noctur-look-sky {
-  opacity: 0;
+.nh-app {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  gap: 4px;
 }
-.noctur-look-clip[data-palette-preview='void'] .noctur-look-eclipse {
-  filter: grayscale(1);
+.nh-app > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  line-height: 20px;
+}
+.nh-app > div:first-child span:first-child {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nh-app > div:first-child span:last-child {
+  color: var(--p-fg2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.nh-appbar {
+  height: 2px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--p-fg) 8%, transparent);
+}
+.nh-appbar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--p-fg3);
+}
+.nh-app:first-child .nh-appbar i {
+  background: var(--p-strong);
+}
+
+@media (max-width: 900px) {
+  .nh-plan-id {
+    flex-basis: 100%;
+  }
+  .nh-plan-stat {
+    flex: 1;
+  }
+  .nh-status {
+    grid-template-areas:
+      'title button'
+      'route route';
+    row-gap: 4px;
+  }
+  .nh-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Home tiles: "Your IP", "Proxy IP" and Traffic, three to a row; 18 px icons with no shape behind;
+   compact type, the provider and the place on their own lines. */
+.nh-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.nh-tiles.one {
+  grid-template-columns: minmax(0, 1fr);
+}
+.nh-tile {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding: 12px 14px;
+}
+.nh-tile-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.nh-tile-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--p-strong);
+}
+.nh-tile-icon svg {
+  width: 18px;
+  height: 18px;
+}
+/* A row that is empty while the tile waits keeps its height (a lone space would collapse to none). */
+.nh-tile-line {
+  min-height: 16px;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nh-ip {
+  justify-self: start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 500 15px/20px var(--font-mono);
+  letter-spacing: -0.01em;
+  text-align: left;
+}
+.nh-ip.dim {
+  color: var(--p-fg3);
+}
+.nh-copy {
+  cursor: copy;
+  border-radius: 4px;
+  transition: color 0.15s var(--nh-ease);
+}
+.nh-copy:hover {
+  color: var(--p-strong);
+}
+.nh-refresh {
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--p-fg3);
+  cursor: pointer;
+  transition:
+    background-color 0.15s var(--nh-ease),
+    color 0.15s var(--nh-ease);
+}
+.nh-refresh:hover:not(:disabled) {
+  color: var(--p-fg);
+  background: color-mix(in srgb, var(--p-fg) 8%, transparent);
+}
+.nh-refresh svg {
+  width: 14px;
+  height: 14px;
+}
+.nh-refresh.busy svg {
+  animation: nh-spin 0.9s linear infinite;
+}
+@keyframes nh-spin {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+.nh-copy:focus-visible,
+.nh-refresh:focus-visible,
+.nh-gtile:focus-visible {
+  outline: 2px solid var(--p-strong);
+  outline-offset: 2px;
+}
+.nh-speeds {
+  display: flex;
+  gap: 12px;
+  font: 500 15px/20px var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+.nh-speeds span {
+  display: flex;
+  gap: 4px;
+  white-space: nowrap;
+}
+.nh-speeds i {
+  font-style: normal;
+  color: var(--p-fg3);
+}
+/* Asking before the first lookup: as wide as the two address tiles. */
+.nh-ask {
+  grid-column: span 2;
+}
+.nh-ask p {
+  margin: 0 0 8px;
+}
+.nh-ask-actions {
+  display: flex;
+  gap: 8px;
+}
+/* The first group's servers under the connection line. */
+.noctur-card > .nh-nodes {
+  padding: 8px;
+}
+/* Proxy groups as tiles. */
+.nh-gtiles {
+  display: grid;
+  gap: 8px;
+}
+.nh-gtiles > .nh-head {
+  padding: 0 8px 0 4px;
+  min-height: 24px;
+}
+.nh-gtile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: 12px;
+}
+.nh-gtile {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  transition: border-color 0.15s var(--nh-ease);
+}
+.nh-gtile[data-open] {
+  grid-column: 1 / -1;
+}
+.nh-gtile-head {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.nh-gtile:hover,
+.nh-gtile[data-open] {
+  border-color: color-mix(in srgb, var(--p-fg) 22%, transparent);
+}
+.nh-gtile > .nh-nodes {
+  padding: 0 8px 8px;
+}
+::view-transition-group(*) {
+  animation-duration: 0.24s;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+.nh-gtile-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.nh-gtile-name {
+  font-weight: 500;
+}
+.nh-gtile-name,
+.nh-gtile-now {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 900px) {
+  .nh-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .nh-tiles > :last-child:not(:first-child) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The IPv6 address under the IPv4 one: much smaller and a few tones darker. Its slot is always there,
+   empty without IPv6, and a tile that waits has the same rows, so nothing moves when answers arrive. */
+.nh-ip6 {
+  min-height: 14px;
+  justify-self: start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 400 11px/14px var(--font-mono);
+  color: var(--p-fg3);
+  text-align: left;
+  margin-bottom: 2px;
+}
+/* The main group's route line opens its servers: the chevron says so. */
+.nh-route-chev {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  margin-left: 2px;
+  color: var(--p-fg2);
+  transition: transform 0.15s var(--nh-ease);
+}
+.nh-route[aria-expanded='true'] .nh-route-chev {
+  transform: rotate(180deg);
+}
+
+/* Home scrolls under the window's top strip: its top edge fades into the background instead of
+   cutting the cards off. --nh-fade grows from 0 to 28 px over the first 32 px of scrolling (set in
+   base-page.tsx), so the plan card is whole at rest. The mask keeps the cards' glass. */
+.noctur-content.compact {
+  -webkit-mask-image: linear-gradient(transparent 0, #000 var(--nh-fade, 0px));
+  mask-image: linear-gradient(transparent 0, #000 var(--nh-fade, 0px));
+}
+
+/* The Traffic tile's graph (home-tiles.tsx, SpeedGraph): two shades of the accent:
+   download the accent with the stronger fill, upload halfway to the text color, lighter in
+   dark and darker in light; in Void both are grays. The arrows above take the same shades. */
+.nh-traffic {
+  --nh-down: var(--p-strong);
+  --nh-up: color-mix(in srgb, var(--p-strong) 50%, var(--p-fg));
+}
+.nh-speeds i.down {
+  color: var(--nh-down);
+}
+.nh-speeds i.up {
+  color: var(--nh-up);
+}
+.nh-graph {
+  position: relative;
+  height: 32px;
+  margin-top: 6px;
+  overflow: hidden;
+  cursor: crosshair;
+  /* Soft ends, so the curves enter and leave without a hard edge. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+.nh-graph-plot {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.nh-graph path {
+  vector-effect: non-scaling-stroke;
+}
+.nh-graph-line {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.nh-graph-line.down {
+  stroke: var(--nh-down);
+}
+.nh-graph-line.up {
+  stroke: var(--nh-up);
+}
+.nh-graph-area {
+  stroke: none;
+}
+.nh-graph-area.down {
+  fill: color-mix(in srgb, var(--nh-down) 30%, transparent);
+}
+.nh-graph-area.up {
+  fill: color-mix(in srgb, var(--nh-up) 18%, transparent);
+}
+/* One step to the left over the second until the next sample. */
+.nh-graph-slide {
+  animation: nh-graph-slide 1s linear forwards;
+}
+@keyframes nh-graph-slide {
+  to {
+    transform: translateX(var(--nh-step));
+  }
+}
+.nh-graph-hair {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--p-fg3);
+  pointer-events: none;
+}
+
+/* Minimal Home (pages/home.tsx): one column the height of the window, the plan on top, the
+   connection in the middle, the tiles at the bottom. */
+.nm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: calc(100vh - 22px);
+  padding: 10px 8px 16px;
+  font-size: 13px;
+}
+.nm .nh-plan {
+  flex: none;
+}
+.nm-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+.nm-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 40px;
+  line-height: 48px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.nm-state .nh-dot {
+  width: 12px;
+  height: 12px;
+}
+/* The same height with the time or without it (disconnected), so nothing below moves. */
+.nm-time {
+  height: 22px;
+  line-height: 22px;
+  font-size: 15px;
+  color: var(--p-fg2);
+  font-variant-numeric: tabular-nums;
+}
+.nm-route {
+  justify-self: center;
+  max-width: min(100%, 560px);
+  margin-top: 4px;
+}
+.nm-servers {
+  width: min(100%, 560px);
+  text-align: left;
+}
+.nm-connect {
+  margin-top: 16px;
+  min-width: 160px;
+  height: 40px;
+  font-size: 14px;
+}
+.nh-tiles.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+/* Without the Traffic tile: one line of live speeds and the connection method. */
+.nm-line {
+  display: flex;
+  gap: 18px;
+  margin-top: 14px;
+  font-size: 15px;
+  color: var(--p-fg2);
+}
+.nm-line span {
+  display: inline-flex;
+  gap: 4px;
+  white-space: nowrap;
+}
+.nm-line i {
+  font-style: normal;
+  font-weight: 600;
+}
+.nm-line i.down {
+  color: var(--p-strong);
+}
+.nm-line i.up {
+  color: color-mix(in srgb, var(--p-strong) 50%, var(--p-fg));
+}
+.nm-line span:last-child {
+  padding-left: 18px;
+  border-left: 1px solid var(--noctur-line);
 }

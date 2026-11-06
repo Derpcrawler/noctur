@@ -5,7 +5,8 @@ import { mihomoUnfixedProxy } from '@renderer/utils/ipc'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Spinner } from '@renderer/components/ui/spinner'
-import { Gauge, MapPin } from 'lucide-react'
+import { CircleX, Gauge, MapPin } from 'lucide-react'
+import { delayTone } from '@renderer/noctur/delay-tone'
 
 interface Props {
   mutateProxies: () => void
@@ -21,11 +22,11 @@ interface Props {
   isGroupDelaying?: boolean
 }
 
+// Noctur: the thresholds Home uses (noctur/delay-tone.ts).
 function delayColorClass(delay: number): string {
   if (delay === -1) return 'text-primary'
   if (delay === 0) return 'text-destructive'
-  if (delay < 500) return 'text-success'
-  return 'text-warning'
+  return { good: 'text-success', slow: 'text-warning', bad: 'text-destructive' }[delayTone(delay)]
 }
 
 const ProxyItem: React.FC<Props> = React.memo((props) => {
@@ -67,7 +68,8 @@ const ProxyItem: React.FC<Props> = React.memo((props) => {
 
   function delayContent(d: number): React.ReactNode {
     if (d === -1) return <Gauge className="size-3.5" />
-    if (d === 0) return '–'
+    // Noctur: a timeout is marked, not a dash (the cell is too narrow for the word).
+    if (d === 0) return <CircleX className="size-3.5" aria-label={t('noctur.home.timeout')} />
     return d.toString()
   }
 
@@ -137,7 +139,7 @@ const ProxyItem: React.FC<Props> = React.memo((props) => {
                 )}
                 <Button
                   variant="ghost"
-                  title={proxy.type}
+                  title={delay === 0 ? t('noctur.home.timeout') : proxy.type}
                   disabled={showLoading}
                   onClick={(e) => {
                     e.stopPropagation()
@@ -178,7 +180,7 @@ const ProxyItem: React.FC<Props> = React.memo((props) => {
                 )}
                 <Button
                   variant="ghost"
-                  title={proxy.type}
+                  title={delay === 0 ? t('noctur.home.timeout') : proxy.type}
                   disabled={showLoading}
                   onClick={(e) => {
                     e.stopPropagation()

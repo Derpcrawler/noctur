@@ -6,9 +6,9 @@ const START_DELAY_MS = 10_000
 const inFlight = new Set<string>()
 let started = false
 
-function isDue(item: ProfileItem): boolean {
+export function isDue(item: ProfileItem): boolean {
   if (item.type !== 'remote') return false
-  if (!item.interval) return false
+  if (!item.interval || item.interval < 0) return false
   if (item.autoUpdate === false) return false
   const timeSince = Date.now() - (item.updated || 0)
   return timeSince >= item.interval * 60 * 1000

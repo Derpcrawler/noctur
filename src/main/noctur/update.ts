@@ -178,8 +178,8 @@ export const MAC_INSTALL_EXIT = 13
  * while the app is still open. It first creates `marker` (the app sees the password was accepted
  * and shows "Installing"), copies the package into a new folder only root can write to and checks
  * it there, so the file the user's account can change is not the one installed, then installs and
- * removes the copy. The app restarts itself afterwards. A background root process that waited for
- * the app to quit did not survive the end of the privileged call (owner's test, 2026-10-11).
+ * removes the copy. The app restarts itself afterwards. The install runs inside the privileged call,
+ * as a background root process waiting for the app to quit does not survive the end of that call.
  * `installer` is replaced in tests.
  */
 export function macInstallScript(opts: {

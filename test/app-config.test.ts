@@ -44,10 +44,10 @@ describe('app config recovery', () => {
       expect(cfg.palette).toBe('carina')
       expect(cfg.proxyMode).toBe(true)
 
-      await patchAppConfig({ starField: false })
+      await patchAppConfig({ navIcons: false })
       // The broken file never replaced the good backup; the new primary has the recovered settings.
       expect(onDisk(`${paths.config}.backup`).palette).toBe('carina')
-      expect(onDisk(paths.config)).toMatchObject({ palette: 'carina', starField: false, proxyMode: true })
+      expect(onDisk(paths.config)).toMatchObject({ palette: 'carina', navIcons: false, proxyMode: true })
     })
   }
 

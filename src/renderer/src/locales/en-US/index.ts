@@ -4,13 +4,7 @@ export default {
       credits:
         'Noctur is a modified version of Koala Clash by coolcoala, which builds on Sparkle by xishang0128 and Mihomo Party by pompurin404. Licensed under GPL-3.0.'
     },
-    palettes: { more: 'More', less: 'Show less' },
     profile: { every: 'every {{interval}}' },
-    picker: {
-      test: 'Test delays',
-      auto: 'This group picks its node automatically.',
-      all: 'All proxy groups'
-    },
     core: {
       upToDate: '{{version}}, same as built-in',
       title: 'Core',
@@ -24,17 +18,6 @@ export default {
       use: 'Use',
       remove: 'Remove',
       note: 'Downloads come from MetaCubeX on GitHub and are checked against the SHA-256 GitHub publishes. Your password is asked once per core, to let it run TUN.'
-    },
-    look: {
-      title: 'Look',
-      noctur: 'Noctur',
-      calm: 'Calm',
-      nocturDesc:
-        'The moon lights up with a sunrise when you connect, under drifting glows and stars.',
-      calmDesc: 'A simple power switch on a still sky. Nothing moves unless you do.',
-      welcome: 'Welcome to Noctur',
-      pick: 'Pick a look to start with. You can switch any time in Settings.',
-      continue: 'Continue'
     },
     update: {
       available: 'A new version of Noctur is available:',
@@ -58,7 +41,25 @@ export default {
       settingCheck: 'Check for new versions',
       checkFailed: "Couldn't check for updates. Try again later."
     },
-    appearance: { starField: 'Star field', connectJump: 'Connect animation' },
+    appearance: {
+      skin: 'Skin',
+      dots: 'Dot matrix shader',
+      flat: 'Plain',
+      navIcons: 'Sidebar icons',
+      fps: 'Background frame rate',
+      fpsUnit: 'fps',
+      custom: 'Custom',
+      homeLayout: 'Home',
+      full: 'Full',
+      minimal: 'Minimal',
+      traffic: 'Traffic on Home',
+      homeGroups: 'Proxy groups on Home',
+      list: 'List',
+      tiles: 'Tiles',
+      addresses: 'IP addresses on Home',
+      addressesHelp:
+        'Your IP is looked up directly, outside the proxy, at ipwho.is, api4.ipify.org and api6.ipify.org. Proxy IP is looked up through your main proxy group at api-ipv4.ip.sb and api-ipv6.ip.sb. These services see the address each request comes from. Results are kept for 10 minutes.'
+    },
     settings: {
       connection: 'Connection',
       general: 'General',
@@ -77,14 +78,42 @@ export default {
       settings: 'Settings'
     },
     home: {
-      through: 'Through {{node}} for',
-      ready: 'Ready to connect with {{profile}}',
+      ready: 'Ready to connect',
       connect: 'Connect',
       disconnect: 'Disconnect',
       used: '{{used}} of {{total}} used',
       method: 'Connection method',
-      tunHint: 'all apps',
-      proxyHint: 'proxy-aware apps'
+      trafficLeft: 'Traffic left',
+      daysLeft_one: '{{count}} day left',
+      daysLeft_other: '{{count}} days left',
+      plan: 'Plan',
+      updated: 'Updated {{time}}',
+      groups: 'Proxy groups',
+      testAll: 'Test all',
+      topApps: 'Top apps',
+      all: 'All',
+      noConnections: 'No connections yet',
+      showServers: 'Show servers',
+      timeout: 'Timeout',
+      yourIp: 'Your IP',
+      proxyIp: 'Proxy IP',
+      traffic: 'Traffic',
+      sessionTotal: '{{total}} this session',
+      secondsAgo_one: '{{count}} second ago',
+      secondsAgo_other: '{{count}} seconds ago',
+      checkAgain: 'Check again',
+      copy: 'Copy',
+      copied: 'Copied',
+      checking: 'Checking…',
+      couldNotCheck: 'Couldn’t check',
+      tryAgainHint: 'Check again with the button above',
+      whileConnected: 'Shown while connected',
+      inGlobal: 'Not available in Global mode',
+      askTitle: 'Show your IP addresses?',
+      askText:
+        'Noctur asks ipwho.is and ip.sb which addresses websites see, without the proxy and through it.',
+      askYes: 'Show addresses',
+      askNo: 'Not now'
     },
     rule: 'Rule',
     global: 'Global',
@@ -579,13 +608,13 @@ export default {
     advanced: {
       title: 'Advanced Settings',
       moreSettings: 'More Settings',
-      autoEnterLightMode: 'Auto enter light mode',
+      autoEnterLightMode: 'Lightweight mode',
       autoEnterLightModeHelp:
-        'Automatically enter light mode after closing window for specified time',
+        'Frees memory after the window has been closed for a while. Your connection stays on, and the window takes about a second to reopen.',
       lightModeBehavior: 'Light mode behavior',
       keepCoreOnly: 'Keep core only',
       closeRendererOnly: 'Close renderer only',
-      autoEnterLightModeDelay: 'Auto enter light mode delay',
+      autoEnterLightModeDelay: 'Lightweight mode delay',
       seconds: 's',
       copyEnvType: 'Copy environment variable type',
       corePriority: 'Core process priority',
@@ -872,6 +901,7 @@ export default {
     invalidUrl: 'Invalid URL',
     pasteFromClipboard: 'Paste from clipboard',
     urlPlaceholder: 'Enter subscription URL...',
+    fileLoadError: 'Could not read this file, so saving is turned off',
     editSubscription: 'Edit subscription',
     editSubscriptionNoticePrefix:
       'Note: edits here will be overwritten after subscription refresh. For custom changes, use ',

@@ -3,6 +3,20 @@
   <head>
     <meta charset="UTF-8" lang="zh" />
     <title>Noctur</title>
+    <!-- Noctur: the app's base color until its theme applies (App.tsx removes this). Without it the
+         first frames are white, because main.css starts with the light theme's background. -->
+    <style id="noctur-first-paint">
+      html,
+      body {
+        background: #050812;
+      }
+      @media (prefers-color-scheme: light) {
+        html,
+        body {
+          background: #f5f7fb;
+        }
+      }
+    </style>
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <meta
       http-equiv="Content-Security-Policy"

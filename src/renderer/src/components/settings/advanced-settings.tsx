@@ -24,7 +24,6 @@ import {
   SelectValue
 } from '@renderer/components/ui/select'
 import { Switch } from '@renderer/components/ui/switch'
-import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import {
@@ -67,9 +66,6 @@ const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     controlSniff = true,
     pauseSSID,
     mihomoCpuPriority = 'PRIORITY_NORMAL',
-    autoLightweight = false,
-    autoLightweightDelay = 60,
-    autoLightweightMode = 'core',
     envType = [platform === 'win32' ? 'powershell' : 'bash'],
     networkDetection = false,
     networkDetectionBypass = ['VMware', 'vEthernet'],
@@ -108,67 +104,6 @@ const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
 
   return (
     <SettingCard title={t('noctur.settings.advanced')}>
-      <SettingItem
-        title={t('settings.advanced.autoEnterLightMode')}
-        actions={
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="icon-sm" variant="ghost">
-                <MessageCircleQuestionMark className="text-lg" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('settings.advanced.autoEnterLightModeHelp')}</TooltipContent>
-          </Tooltip>
-        }
-        divider
-      >
-        <Switch
-          checked={autoLightweight}
-          onCheckedChange={(value) => {
-            patchAppConfig({ autoLightweight: value })
-          }}
-        />
-      </SettingItem>
-      {autoLightweight && (
-        <>
-          {FORK.keepCore && (
-          <SettingItem title={t('settings.advanced.lightModeBehavior')} divider>
-            <Tabs
-              value={autoLightweightMode}
-              onValueChange={(value) => {
-                patchAppConfig({ autoLightweightMode: value as 'core' | 'tray' })
-                if (value === 'core') {
-                  patchAppConfig({ autoLightweightDelay: Math.max(autoLightweightDelay, 5) })
-                }
-              }}
-            >
-              <TabsList>
-                <TabsTrigger value="core">{t('settings.advanced.keepCoreOnly')}</TabsTrigger>
-                <TabsTrigger value="tray">{t('settings.advanced.closeRendererOnly')}</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </SettingItem>
-          )}
-          <SettingItem title={t('settings.advanced.autoEnterLightModeDelay')} divider>
-            <InputGroup className="w-37.5 h-8">
-              <InputGroupInput
-                type="number"
-                value={autoLightweightDelay.toString()}
-                onChange={async (event) => {
-                  let num = parseInt(event.target.value)
-                  if (isNaN(num)) num = 0
-                  const minDelay = autoLightweightMode === 'core' && FORK.keepCore ? 5 : 0
-                  if (num < minDelay) num = minDelay
-                  await patchAppConfig({ autoLightweightDelay: num })
-                }}
-              />
-              <InputGroupAddon align="inline-end">
-                <InputGroupText>{t('settings.advanced.seconds')}</InputGroupText>
-              </InputGroupAddon>
-            </InputGroup>
-          </SettingItem>
-        </>
-      )}
       {showHiddenSettings && (
         <SettingItem
           title={t('settings.advanced.copyEnvType')}

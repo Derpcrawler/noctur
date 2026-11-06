@@ -4,13 +4,7 @@ export default {
       credits:
         'Noctur — изменённая версия Koala Clash от coolcoala, основанного на Sparkle от xishang0128 и Mihomo Party от pompurin404. Распространяется по лицензии GPL-3.0.'
     },
-    palettes: { more: 'Ещё', less: 'Свернуть' },
     profile: { every: 'каждые {{interval}}' },
-    picker: {
-      test: 'Проверить задержку',
-      auto: 'Эта группа выбирает узел автоматически.',
-      all: 'Все группы прокси'
-    },
     core: {
       upToDate: '{{version}}, совпадает со встроенным',
       title: 'Ядро',
@@ -24,17 +18,6 @@ export default {
       use: 'Использовать',
       remove: 'Удалить',
       note: 'Ядро скачивается с GitHub MetaCubeX и проверяется по SHA-256, который публикует GitHub. Пароль запрашивается один раз для каждого ядра, чтобы оно могло работать в режиме TUN.'
-    },
-    look: {
-      title: 'Вид',
-      noctur: 'Noctur',
-      calm: 'Спокойный',
-      nocturDesc: 'При подключении над луной восходит солнце, а по небу плывут сияния и звёзды.',
-      calmDesc:
-        'Простая кнопка включения на неподвижном небе. Ничего не движется, пока вы сами не нажмёте.',
-      welcome: 'Добро пожаловать в Noctur',
-      pick: 'Выберите вид для начала. Его можно сменить в любой момент в настройках.',
-      continue: 'Продолжить'
     },
     update: {
       available: 'Доступна новая версия Noctur:',
@@ -58,7 +41,25 @@ export default {
       settingCheck: 'Проверять новые версии',
       checkFailed: 'Не удалось проверить обновления. Попробуйте позже.'
     },
-    appearance: { starField: 'Звёздное поле', connectJump: 'Анимация подключения' },
+    appearance: {
+      skin: 'Оформление',
+      dots: 'Шейдер точечной матрицы',
+      flat: 'Без фона',
+      navIcons: 'Значки в боковой панели',
+      fps: 'Частота кадров фона',
+      fpsUnit: 'к/с',
+      custom: 'Своя',
+      homeLayout: 'Главная',
+      full: 'Полная',
+      minimal: 'Простая',
+      traffic: 'Трафик на главной',
+      homeGroups: 'Группы прокси на главной',
+      list: 'Список',
+      tiles: 'Плитки',
+      addresses: 'IP-адреса на главной',
+      addressesHelp:
+        'Ваш IP запрашивается напрямую, мимо прокси, у ipwho.is, api4.ipify.org и api6.ipify.org. IP прокси запрашивается через основную группу прокси у api-ipv4.ip.sb и api-ipv6.ip.sb. Эти сервисы видят адрес, с которого пришёл запрос. Результат хранится 10 минут.'
+    },
     settings: {
       connection: 'Подключение',
       general: 'Основные',
@@ -77,14 +78,46 @@ export default {
       settings: 'Настройки'
     },
     home: {
-      through: 'Через {{node}}:',
-      ready: 'Готово к подключению: {{profile}}',
+      ready: 'Готово к подключению',
       connect: 'Подключить',
       disconnect: 'Отключить',
       used: 'Использовано {{used}} из {{total}}',
       method: 'Способ подключения',
-      tunHint: 'все приложения',
-      proxyHint: 'поддерживающие прокси'
+      trafficLeft: 'Осталось трафика',
+      daysLeft_one: 'Остался {{count}} день',
+      daysLeft_few: 'Осталось {{count}} дня',
+      daysLeft_many: 'Осталось {{count}} дней',
+      daysLeft_other: 'Осталось {{count}} дня',
+      plan: 'Тариф',
+      updated: 'Обновлено {{time}}',
+      groups: 'Группы прокси',
+      testAll: 'Проверить все',
+      topApps: 'Приложения',
+      all: 'Все',
+      noConnections: 'Пока нет соединений',
+      showServers: 'Показать серверы',
+      timeout: 'Тайм-аут',
+      yourIp: 'Ваш IP',
+      proxyIp: 'IP прокси',
+      traffic: 'Трафик',
+      sessionTotal: '{{total}} за сеанс',
+      secondsAgo_one: '{{count}} секунду назад',
+      secondsAgo_few: '{{count}} секунды назад',
+      secondsAgo_many: '{{count}} секунд назад',
+      secondsAgo_other: '{{count}} секунды назад',
+      checkAgain: 'Проверить снова',
+      copy: 'Скопировать',
+      copied: 'Скопировано',
+      checking: 'Проверка…',
+      couldNotCheck: 'Не удалось проверить',
+      tryAgainHint: 'Проверьте снова кнопкой выше',
+      whileConnected: 'Показывается при подключении',
+      inGlobal: 'Недоступно в глобальном режиме',
+      askTitle: 'Показывать ваши IP-адреса?',
+      askText:
+        'Noctur спросит у ipwho.is и ip.sb, какие адреса видят сайты без прокси и через него.',
+      askYes: 'Показывать',
+      askNo: 'Не сейчас'
     },
     rule: 'Правила',
     global: 'Глобально',
@@ -579,13 +612,13 @@ export default {
     advanced: {
       title: 'Расширенные настройки',
       moreSettings: 'Дополнительные настройки',
-      autoEnterLightMode: 'Автоматически переходить в облегчённый режим',
+      autoEnterLightMode: 'Облегчённый режим',
       autoEnterLightModeHelp:
-        'Автоматически переходить в облегчённый режим через заданное время после закрытия окна',
+        'Освобождает память, когда окно закрыто уже какое-то время. Соединение не прерывается, а окно откроется примерно за секунду.',
       lightModeBehavior: 'Поведение облегчённого режима',
       keepCoreOnly: 'Оставлять только ядро',
       closeRendererOnly: 'Закрывать только интерфейс',
-      autoEnterLightModeDelay: 'Задержка перед переходом в облегчённый режим',
+      autoEnterLightModeDelay: 'Задержка облегчённого режима',
       seconds: 'с',
       copyEnvType: 'Формат копирования переменных окружения',
       corePriority: 'Приоритет процесса ядра',
@@ -873,6 +906,7 @@ export default {
     invalidUrl: 'Некорректный URL',
     pasteFromClipboard: 'Вставить из буфера обмена',
     urlPlaceholder: 'Введите ссылку на подписку...',
+    fileLoadError: 'Не удалось прочитать файл, поэтому сохранение отключено',
     editSubscription: 'Редактировать подписку',
     editSubscriptionNoticePrefix:
       'Примечание: изменения здесь будут сброшены после обновления подписки. Для кастомизации используйте ',

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react'
+import { toast } from 'sonner'
 import {
   Dialog,
   DialogClose,
@@ -27,6 +28,8 @@ const Viewer: React.FC<Props> = (props) => {
   const { type, path, title, format, privderType, behavior, onClose } = props
   const [currData, setCurrData] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  // Noctur: the editor is empty until the read succeeds; saving then would erase the file.
+  const [isLoaded, setIsLoaded] = useState(false)
 
   const language: Language = useMemo(() => {
     if (format === 'MrsRule') return 'text'
@@ -96,6 +99,9 @@ const Viewer: React.FC<Props> = (props) => {
         } catch (error) {
           setCurrData(fileContent)
         }
+        setIsLoaded(true)
+      } catch (e) {
+        toast.error(`${t('profile.fileLoadError')}: ${e}`)
       } finally {
         setIsLoading(false)
       }
@@ -140,6 +146,7 @@ const Viewer: React.FC<Props> = (props) => {
           {type === 'File' && format !== 'MrsRule' && (
             <Button
               size="sm"
+              disabled={!isLoaded}
               onClick={async () => {
                 await setFileStr(path, currData)
                 onClose()

@@ -105,10 +105,9 @@ describe.runIf(process.platform === 'darwin')('self-update install script (macOS
     )
   }
 
-  // Koala Clash escaped only the first space in the package path, so the install command broke
-  // for a path with more spaces, and a quote in it ended the AppleScript string. The install also
-  // has to finish inside the privileged call: a background process left to install after the app
-  // quit did not survive its end (owner's test, 2026-10-11).
+  // The package path is quoted for any number of spaces and for quotes, which would otherwise end
+  // the AppleScript string. The install finishes inside the privileged call, as a background
+  // process left to install after the app quits does not survive the end of that call.
   it('installs the package from a path with spaces and an apostrophe before returning', async () => {
     const s = setup()
     const err = await run(

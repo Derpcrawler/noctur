@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { Github } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-// Noctur: one page with a section index on the left (design/mockup.html).
+// Noctur: one page with a section index on the left.
 const SECTIONS = [
   { id: 'connection', label: 'noctur.settings.connection' },
   { id: 'general', label: 'noctur.settings.general' },
@@ -80,7 +80,9 @@ const Settings: React.FC = () => {
               onClick={() => {
                 setCurrent(sec.id)
                 clickedUntil.current = Date.now() + 800
-                document.getElementById(`set-${sec.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                document
+                  .getElementById(`set-${sec.id}`)
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
               }}
             >
               {t(sec.label)}

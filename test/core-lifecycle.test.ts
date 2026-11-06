@@ -53,7 +53,7 @@ const s = vi.hoisted(() => ({
   apiUp: true,
   runtime: {} as Record<string, unknown>,
   appConfig: {} as Record<string, unknown>,
-  // Holds the DNS restore at its first system call (route) once, until released.
+  // Holds the DNS restore at its first networksetup call once, until released.
   dnsHold: null as null | Promise<void>,
   exitDelayMs: 0
 }))
@@ -65,6 +65,7 @@ vi.mock('child_process', async (orig) => {
   const run = async (file: string, args: string[], ...rest: unknown[]): Promise<{ stdout: string; stderr: string }> => {
     // The DNS restore's system calls never reach the real commands (networksetup would change this
     // machine's DNS): they fail, after the one held call when a test holds it.
+    if (file.endsWith('/noctur-dns')) return { stdout: '', stderr: '' }
     if (file === 'route' || file === 'networksetup') {
       const hold = s.dnsHold
       s.dnsHold = null
@@ -112,6 +113,8 @@ vi.mock('../src/main/core/factory', () => ({
 vi.mock('../src/main/utils/dirs', () => ({
   dataDir: () => s.dir,
   logPath: () => join(s.dir, 'core.log'),
+  // A folder that does not exist: the resolver tool is a fake (child_process above), never a file.
+  mihomoCoreDir: () => '/nonexistent/sidecar',
   // checkProfile runs it with -t. Like the real one, it knows no core but the built-in one.
   mihomoCorePath: (core: string) => {
     if (core !== 'mihomo') throw new Error('error.corePathError')
@@ -398,7 +401,7 @@ describe('stop during a slow DNS restore', () => {
     }
     let release!: () => void
     s.dnsHold = new Promise<void>((r) => (release = r))
-    s.appConfig = { originDNS: '192.0.2.1', autoSetDNSMode: 'exec' }
+    s.appConfig = { originDNSByService: { 'Wi-Fi': 'Empty' }, autoSetDNSMode: 'exec' }
     try {
       const stop = manager.stopCore()
       await sleep(50)
@@ -422,7 +425,7 @@ describe('overlapping stops and starts', () => {
       ;(await start).forEach((ready) => ready.catch(() => {}))
       let release!: () => void
       s.dnsHold = new Promise<void>((r) => (release = r))
-      s.appConfig = { originDNS: '192.0.2.1', autoSetDNSMode: 'exec' }
+      s.appConfig = { originDNSByService: { 'Wi-Fi': 'Empty' }, autoSetDNSMode: 'exec' }
       try {
         const stop = manager.stopCore() // held in the DNS restore
         await sleep(20)

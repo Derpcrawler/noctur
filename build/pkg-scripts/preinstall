@@ -136,16 +136,15 @@ if [ "$app_valid" = 1 ] || [ "$cores_valid" = 1 ]; then
 fi
 
 # A manual install over a running Noctur: quit it the same way (its own shutdown, two requests to skip
-# the confirmation), and leave a note so postinstall opens it again; it otherwise kept running the
-# old version until restarted by hand (owner, 2026-10-11). Not during a self-update, which runs the
-# installer with a fresh flag only root can write and restarts the app itself. If Noctur does not quit
-# in time it is left running, as before.
+# the confirmation), and leave a note so postinstall opens it again; otherwise it keeps running the
+# old version until restarted by hand. Not during a self-update, which runs the installer with a fresh
+# flag only root can write and restarts the app itself. If Noctur does not quit in time it is left
+# running.
 NEW_APP="$ROOT/Applications/Noctur.app"
 NEW_ID="app.noctur.desktop"
 SELF_UPDATE_FLAG="${NOCTUR_PKG_SELF_UPDATE_FLAG:-$ROOT/private/var/run/noctur-self-update}"
-# A fixed path only root can write: macOS can run this script twice in one installation (owner's
-# test, 2026-10-11: the second run found Noctur already gone and the note was lost), so the note is
-# never removed here, only by postinstall.
+# A fixed path only root can write: macOS can run this script twice in one installation, and the
+# second run finds Noctur already gone, so the note is never removed here, only by postinstall.
 REOPEN_NOTE="${NOCTUR_PKG_REOPEN_NOTE:-$ROOT/private/var/run/noctur-reopen}"
 NEW_PATTERN="^$(ere "$NEW_APP")/Contents/MacOS/Noctur( |$)"
 

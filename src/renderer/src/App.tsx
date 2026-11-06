@@ -21,11 +21,10 @@ import HwidLimitAlert from '@renderer/components/profiles/hwid-limit-alert'
 import WindowControls from '@renderer/components/window-controls'
 import mapDark from '@renderer/assets/map_darktheme.svg'
 import mapLight from '@renderer/assets/map_lighttheme.svg'
-import Backdrop from '@renderer/noctur/backdrop'
+import Background, { resolveBackground } from '@renderer/noctur/background'
 import { errorToast } from '@renderer/noctur/error-toast'
 import NocturSidebar from '@renderer/noctur/sidebar'
-import LookPicker from '@renderer/noctur/look-picker'
-import { applyPalette, DEFAULT_PALETTE, hasLight } from '@renderer/noctur/palettes'
+import { applyPalette, DEFAULT_PALETTE } from '@renderer/noctur/palettes'
 import { attachConnectionsStore } from '@renderer/store/connections-store'
 import { attachTrafficStore } from '@renderer/store/traffic-store'
 import { attachLogsStore } from '@renderer/store/logs-store'
@@ -41,12 +40,11 @@ const App: React.FC = () => {
     appTheme = 'system',
     customTheme,
     palette = DEFAULT_PALETTE,
-    starField = true,
-    connectJump = true,
-    look = 'noctur'
+    background,
+    backgroundDots,
+    backgroundFps
   } = appConfig || {}
-  // First launch: the look picker shows until a look is chosen; the tour waits for it.
-  const lookPending = !!appConfig && !appConfig.lookChosen
+  const bg = resolveBackground(background, backgroundDots)
   // Noctur palettes apply unless an imported custom theme is chosen.
   const paletteActive = !customTheme || customTheme === 'default.css'
   const { setTheme, systemTheme, resolvedTheme } = useTheme()
@@ -72,7 +70,7 @@ const App: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    if (!appConfig || lookPending) return
+    if (!appConfig) return
     const tourShown = window.localStorage.getItem('tourShown')
     if (!tourShown) {
       import('@renderer/utils/driver').then(({ startTour }) => {
@@ -83,14 +81,12 @@ const App: React.FC = () => {
         })
       })
     }
-  }, [!!appConfig, lookPending])
+  }, [!!appConfig])
 
-  // Noctur: only the Noctur palette has a light version; with any other palette the app stays dark.
-  const effectiveTheme = paletteActive && !hasLight(palette) ? 'dark' : appTheme
   useEffect(() => {
-    setNativeTheme(effectiveTheme)
-    setTheme(effectiveTheme)
-  }, [effectiveTheme, systemTheme])
+    setNativeTheme(appTheme)
+    setTheme(appTheme)
+  }, [appTheme, systemTheme])
 
   useEffect(() => {
     applyTheme(customTheme || 'default.css')
@@ -99,6 +95,19 @@ const App: React.FC = () => {
   useEffect(() => {
     applyPalette(paletteActive ? palette : null)
   }, [palette, paletteActive])
+
+  // Noctur: the theme is applied above, so the first-paint cover from index.html is removed, and
+  // the main process shows the window on this message. Two animation frames: the first draws the
+  // theme, and the second runs after that frame is done.
+  useEffect(() => {
+    if (!appConfig) return
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        document.getElementById('noctur-first-paint')?.remove()
+        window.electron.ipcRenderer.send('nocturFirstFrame')
+      })
+    )
+  }, [!!appConfig])
 
   const [showQuitConfirm, setShowQuitConfirm] = useState(false)
   const [showProfileInstallConfirm, setShowProfileInstallConfirm] = useState(false)
@@ -180,12 +189,12 @@ const App: React.FC = () => {
       }
     >
       {paletteActive ? (
-        // Stars on Home only (owner, 2026-10-11); the glows stay on every page.
-        <Backdrop
-          stars={starField && isHome}
-          jump={connectJump}
-          home={isHome}
-          still={look === 'calm'}
+        <Background
+          kind={bg.kind}
+          dots={bg.dots}
+          palette={palette}
+          dark={resolvedTheme !== 'light'}
+          fps={backgroundFps}
         />
       ) : (
         <img
@@ -196,7 +205,6 @@ const App: React.FC = () => {
           }`}
         />
       )}
-      {lookPending && <LookPicker />}
       {showQuitConfirm && (
         <ConfirmModal
           title={t('modal.confirmQuit')}
@@ -252,8 +260,7 @@ const App: React.FC = () => {
           className="min-w-lg guide-profile-install-modal"
         />
       )}
-      {/* Windows: after the look picker, so the two dialogs never stack */}
-      {showAdminRequired && !lookPending && (
+      {showAdminRequired && (
         <ConfirmModal
           title={t('modal.adminRequired')}
           description={

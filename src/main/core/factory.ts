@@ -5,17 +5,15 @@ import {
   getProfileStr,
   getAppConfig
 } from '../config'
-import {
-  mihomoProfileWorkDir,
-  mihomoWorkConfigPath,
-  mihomoWorkDir, rulePath
-} from '../utils/dirs'
+import { mihomoProfileWorkDir, mihomoWorkConfigPath, mihomoWorkDir, rulePath } from '../utils/dirs'
 import { parseYaml, stringifyYaml } from '../utils/yaml'
 import { copyFile, mkdir, readFile, writeFile } from 'fs/promises'
 import { deepMerge } from '../utils/merge'
 import { defaultControledMihomoConfig } from '../utils/template'
 import { existsSync } from 'fs'
 import path from 'path'
+import { addressRules } from '../noctur/address'
+import { addFakeIPv6Range } from '../noctur/ipv6'
 
 let runtimeConfigStr: string,
   rawProfileStr: string,
@@ -124,6 +122,8 @@ export async function generateProfile(): Promise<{ logLevel: LogLevel }> {
   const controledMihomoConfig = await getControledMihomoConfig()
 
   const configToMerge = JSON.parse(JSON.stringify(controledMihomoConfig))
+  // Noctur: IPv6 is set by the profile. A saved ipv6 value is dropped from the merge.
+  delete configToMerge.ipv6
   if (isLogLevel(currentProfile['log-level'])) {
     delete configToMerge['log-level']
   }
@@ -196,6 +196,14 @@ export async function generateProfile(): Promise<{ logLevel: LogLevel }> {
     }
   }
 
+  // Noctur: the Home address tiles' lookups go first (noctur/address.ts).
+  currentProfile.rules = [
+    ...addressRules(
+      currentProfile['proxy-groups'] as { name?: unknown; type?: unknown }[] | undefined
+    ),
+    ...((currentProfile.rules ?? []) as unknown as string[])
+  ] as unknown as []
+
   const profile = deepMerge(JSON.parse(JSON.stringify(currentProfile)), configToMerge)
   const logLevel = isLogLevel(profile['log-level']) ? profile['log-level'] : 'info'
 
@@ -253,6 +261,8 @@ async function cleanProfile(
   cleanAuthenticationConfig(profile)
   cleanTunConfig(profile, controlTun)
   cleanDnsConfig(profile, controlDns)
+  // Noctur: IPv6 through the tunnel (noctur/ipv6.ts).
+  addFakeIPv6Range(profile as Parameters<typeof addFakeIPv6Range>[0])
   cleanSnifferConfig(profile, controlSniff)
   cleanProxyConfigs(profile)
 }

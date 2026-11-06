@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { pickLanguage } from '../src/main/utils/i18n'
 
-// Failure guarded: the main process started in Russian and switched only when the window had loaded,
-// so an English user saw the menu bar menu in Russian at launch (owner, 2026-10-11).
+// The main process starts in the system's language, so the menu bar menu is in the right language
+// from launch, not only once the window has loaded.
 describe('main process language at startup', () => {
   it('uses the saved language, else the system language, not Russian', () => {
     expect(pickLanguage('en-US', ['ru-RU'])).toBe('en-US')
