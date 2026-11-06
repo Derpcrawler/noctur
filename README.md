@@ -4,28 +4,28 @@
 
 <h1 align="center">Noctur</h1>
 
-<p align="center"><a href="https://github.com/MetaCubeX/mihomo">mihomo</a> client for macOS, Windows and Linux</p>
+<p align="center">A modern client for the <a href="https://github.com/MetaCubeX/mihomo">mihomo</a> core with the full feature set, for macOS, Windows and Linux</p>
 
 <p align="center">
   <a href="https://github.com/Derpcrawler/noctur/releases/latest"><img src="https://img.shields.io/github/v/release/Derpcrawler/noctur?label=latest"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue"></a>
 </p>
 
-<p align="center"><img src="./docs/screenshots/connect.webp" alt="Connecting on Home: the moon lights up with a sunrise" width="800" /></p>
+<p align="center"><img src="./docs/screenshots/home.png" alt="Home: the plan, the connection and its route, IP addresses, traffic and proxy groups" width="800" /></p>
 
 ## Features
 
-- Modern and simple design
-- Two looks: Noctur, with an eclipse that lights up when you connect, and Calm, with a simple power switch
-- TUN mode and system proxy, switched from Home
-- Subscription details: traffic and days left, update interval, support link (Remnawave and similar panels)
-- Proxy groups with latency tests, rules, live connections, logs
-- TUN, DNS and sniffer settings, plus a profile editor with validation
+- Beautiful design with light and dark modes, plus plenty of customization
+- Home at a glance: connection, traffic and IP addresses
+- TUN mode and system proxy
+- Subscription usage and expiry (Remnawave and similar panels)
+- Proxy groups with latency tests, rules, connections and logs
+- TUN, DNS and sniffer settings
+- Profile editor with validation
 - Profile import from `clash://` links
-- Stable and alpha mihomo cores
-- Updates from Home in one click when a new version is out (macOS and Windows)
-- Menu bar and tray menu, global shortcuts, floating speed window
-- Two palettes, Noctur and Void, and a light mode
+- mihomo core updates from Settings, independent of app updates
+- In-app updates on macOS and Windows
+- Lightweight mode that frees memory while the window is closed
 - English, Russian, Chinese
 
 ## Download
@@ -54,7 +54,7 @@ Found a bug? [Open an issue](https://github.com/Derpcrawler/noctur/issues).
 
 ## Build from source
 
-You need Node.js 22.12 or later, pnpm 10 and Git. Building for Windows also needs Go 1.21 or later.
+You need Node.js 22.12 or later, pnpm 10 and Git. Building for Windows also needs Go 1.21 or later, and building on macOS needs the Xcode Command Line Tools.
 
 ```bash
 git clone https://github.com/Derpcrawler/noctur.git
@@ -100,9 +100,9 @@ Linux packages built on macOS need `rpmbuild` (`brew install rpm`) and GNU `ar` 
 
 | | |
 |---|---|
-| ![Home, connected](./docs/screenshots/home.png) | ![Home in light mode, twilight](./docs/screenshots/light.png) |
-| ![The Calm look](./docs/screenshots/calm.png) | ![Proxy groups](./docs/screenshots/proxies.png) |
-| ![Connections](./docs/screenshots/connections.png) | ![Settings, appearance](./docs/screenshots/settings.png) |
+| ![Home, dark](./docs/screenshots/home.png) | ![Home, light](./docs/screenshots/light.png) |
+| ![Minimal Home, dark](./docs/screenshots/minimal.png) | ![Minimal Home, light](./docs/screenshots/minimal-light.png) |
+| ![Proxy groups](./docs/screenshots/proxies.png) | ![Settings, appearance](./docs/screenshots/settings.png) |
 
 ## Credits
 
