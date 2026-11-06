@@ -1,3 +1,28 @@
+## 1.5.0
+
+### New
+
+- Redesigned interface with a new Home page: your plan, the connection and the server it goes through, your proxy groups as tiles or a list, and the busiest apps.
+- Your IP and the proxy's IP on Home, IPv4 and IPv6, with the provider and location. Click an address to copy it. Noctur asks before looking them up.
+- Live traffic on Home, with a speed graph.
+- Minimal Home: your plan, the connection, and your IP addresses and traffic below it. Choose it in Settings, Appearance.
+- Connect, TUN or Proxy, and the live speed in the sidebar on every page.
+- A moving gradient background, or a plain one, with live previews of the Noctur and Void skins in Settings, Appearance. The gradient can also be drawn with a dot matrix shader.
+- Lightweight mode frees memory while the window is closed. It is on by default and can be turned off in Settings, General.
+
+### Improved
+
+- Server delays are tested after you connect and colored by speed, with timeouts clearly marked.
+- Background frame rate in Settings, Appearance.
+- Electron 44.10.2 with the latest security fixes.
+- Small interface improvements and tweaks.
+
+### Fixed
+
+- macOS: Wi-Fi login pages open while connected.
+- macOS: IPv6 sites work through the tunnel when your subscription turns IPv6 on.
+- Bug fixes.
+
 ## 1.1.6
 
 ### Fixed
