@@ -1,3 +1,9 @@
+## 1.5.1
+
+### Fixed
+
+- macOS: additional fixes and improvements to DNS behavior.
+
 ## 1.5.0
 
 ### New
