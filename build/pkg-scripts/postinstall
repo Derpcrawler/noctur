@@ -17,9 +17,13 @@ fi
 # --- Set suid on the mihomo binary ---
 chown root:admin "$CORRECT_PATH/Contents/Resources/sidecar/mihomo"
 chmod +s "$CORRECT_PATH/Contents/Resources/sidecar/mihomo"
-# --- Set suid on the tool that adds the tunnel's DNS resolver (src/main/noctur/system-dns.ts) ---
-chown root:wheel "$CORRECT_PATH/Contents/Resources/sidecar/noctur-dns"
-chmod 4755 "$CORRECT_PATH/Contents/Resources/sidecar/noctur-dns"
+# --- Resolver left by Noctur 1.5.0 ---
+# That version adds a resolver of its own while TUN is on. If it crashed, the resolver stays, and
+# it would come before the TUN's own resolver (src/main/noctur/tun-dns.ts), so it is removed.
+# Only on a real install: the tests run this script with NOCTUR_PKG_ROOT set.
+if [ -z "$ROOT" ]; then
+    printf 'remove State:/Network/Service/noctur-tunnel-dns/DNS\nquit\n' | /usr/sbin/scutil >/dev/null 2>&1
+fi
 # No alpha core is shipped; one found in the installed bundle is setuid root, so it is removed.
 rm -f "$CORRECT_PATH/Contents/Resources/sidecar/mihomo-alpha"
 

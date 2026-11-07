@@ -4,19 +4,12 @@ import { Input } from '@renderer/components/ui/input'
 import { Spinner } from '@renderer/components/ui/spinner'
 import { Switch } from '@renderer/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@renderer/components/ui/select'
 import BasePage from '@renderer/components/base/base-page'
 import SettingCard from '@renderer/components/base/base-setting-card'
 import SettingItem from '@renderer/components/base/base-setting-item'
 import EditableList from '@renderer/components/base/base-list-editor'
 import { useControledMihomoConfig } from '@renderer/hooks/use-controled-mihomo-config'
-import { restartCore, setupFirewall } from '@renderer/utils/ipc'
+import { mihomoHotReloadConfig, restartCore, setupFirewall } from '@renderer/utils/ipc'
 import { platform } from '@renderer/utils/init'
 import React, { useState } from 'react'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
@@ -139,21 +132,19 @@ const Tun: React.FC = () => {
           )}
           {platform === 'darwin' && (
             <SettingItem title={t('pages.tun.autoSetSystemDNS')} divider>
-              <Select
-                value={autoSetDNSMode}
-                onValueChange={async (value) => {
-                  await patchAppConfig({ autoSetDNSMode: value as 'none' | 'exec' | 'service' })
+              <Switch
+                checked={autoSetDNSMode !== 'none'}
+                onCheckedChange={async (value) => {
+                  try {
+                    await patchAppConfig({ autoSetDNSMode: value ? 'exec' : 'none' })
+                  } catch (e) {
+                    toast.error(`${e}`)
+                    return
+                  }
+                  // Applies now when the core runs; otherwise at its next start.
+                  await mihomoHotReloadConfig().catch(() => {})
                 }}
-              >
-                <SelectTrigger size="sm" className="w-50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent position="popper" className="mr-5.5">
-                  <SelectItem value="none">{t('pages.tun.noAutoSet')}</SelectItem>
-                  <SelectItem value="exec">{t('pages.tun.execCommand')}</SelectItem>
-                  <SelectItem value="service">{t('pages.tun.serviceMode')}</SelectItem>
-                </SelectContent>
-              </Select>
+              />
             </SettingItem>
           )}
           <SettingItem title={t('pages.tun.tunModeStack')} divider>

@@ -27,7 +27,8 @@ if (process.env.SKIP_PREPARE === '1') {
   process.exit(0)
 }
 
-// Noctur: remove binaries left by a run for another target, so a build never ships them.
+// Noctur: remove binaries left by a run for another target or an earlier version (noctur-dns), so a
+// build never ships them.
 for (const dir of ['sidecar', 'files']) {
   const full = path.join(cwd, 'extra', dir)
   if (!fs.existsSync(full)) continue
@@ -262,20 +263,6 @@ const resolveEnableLoopback = () =>
     // Noctur: pinned, the "latest" tag can change (release of 2023-11-22).
     sha256: 'f0c328376bd5ae0ef3b0eb19ac1f343c24a9abfe7bc1008d3b2f6ef3573d04d1'
   })
-// Noctur: built here from build/noctur-dns/main.c; macOS only. The installer makes it setuid root.
-const resolveDnsTool = async () => {
-  const output = path.join(cwd, 'extra', 'sidecar', 'noctur-dns')
-  fs.rmSync(output, { force: true })
-  if (platform !== 'darwin') return
-  fs.mkdirSync(path.dirname(output), { recursive: true })
-  const clangArch = arch === 'x64' ? 'x86_64' : 'arm64'
-  execSync(
-    `clang -O2 -Wall -arch ${clangArch} -mmacosx-version-min=13.0 -framework CoreFoundation -framework SystemConfiguration -o "${output}" build/noctur-dns/main.c`,
-    { cwd, stdio: 'inherit' }
-  )
-  console.log(`[INFO]: noctur-dns built for ${clangArch}`)
-}
-
 const resolveSparkleService = () => {
   const map = {
     'win32-x64': 'sparkle-service-windows-amd64-v1',
@@ -372,11 +359,6 @@ const tasks = [
     name: 'sparkle-service',
     func: resolveSparkleService,
     retry: 5
-  },
-  {
-    name: 'noctur-dns',
-    func: resolveDnsTool,
-    retry: 1
   },
   {
     name: 'runner',

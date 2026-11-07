@@ -59,6 +59,8 @@ interface MihomoTunConfig {
   'auto-redirect'?: boolean
   'auto-detect-interface'?: boolean
   'dns-hijack'?: string[]
+  /** How the TUN sets the system's DNS; on macOS "native" and "hijack" both register its resolver. */
+  'dns-mode'?: 'disabled' | 'native' | 'hijack'
   device?: string
   mtu?: number
   'strict-route'?: boolean

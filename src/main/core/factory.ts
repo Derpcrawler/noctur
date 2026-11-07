@@ -14,6 +14,7 @@ import { existsSync } from 'fs'
 import path from 'path'
 import { addressRules } from '../noctur/address'
 import { addFakeIPv6Range } from '../noctur/ipv6'
+import { applyTunDns } from '../noctur/tun-dns'
 
 let runtimeConfigStr: string,
   rawProfileStr: string,
@@ -217,6 +218,8 @@ export async function generateProfile(): Promise<{ logLevel: LogLevel }> {
   }
 
   await cleanProfile(profile, controlDns, controlSniff, controlTun)
+  // Noctur: the TUN's own DNS on macOS (noctur/tun-dns.ts).
+  applyTunDns(profile, appConfig.autoSetDNSMode)
 
   runtimeConfig = profile
   runtimeConfigStr = stringifyYaml(profile)

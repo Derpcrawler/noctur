@@ -7,7 +7,6 @@ import { ChildProcess, execFile, execFileSync, spawn } from 'child_process'
 import {
   dataDir,
   logPath,
-  mihomoCoreDir,
   mihomoCorePath,
   mihomoIpcPath,
   mihomoProfileWorkDir,
@@ -44,17 +43,6 @@ import os from 'os'
 import { createWriteStream, existsSync } from 'fs'
 import { disableSysProxy, triggerSysProxy } from '../sys/sysproxy'
 import { getAxios } from './mihomoApi'
-import { setSysDns } from '../service/api'
-import {
-  clearResolver,
-  createDnsToolRunner,
-  DEFAULT_DNS_MODE,
-  DnsDeps,
-  defaultRun,
-  pointDnsIntoTunnel,
-  restoreDns,
-  withinLimit
-} from '../noctur/system-dns'
 import { t } from '../utils/i18n'
 import { CoreMissingError, ProfileRejectedError, showCoreError } from '../noctur/core-errors'
 
@@ -81,8 +69,6 @@ function isUserCancelledError(error: unknown): boolean {
   )
 }
 
-let setPublicDNSTimer: NodeJS.Timeout | null = null
-let recoverDNSTimer: NodeJS.Timeout | null = null
 let networkDetectionTimer: NodeJS.Timeout | null = null
 let networkDownHandled = false
 
@@ -158,7 +144,6 @@ export async function resetProviderTracking(): Promise<ProviderWait> {
 export async function startCore(detached = false): Promise<Promise<void>[]> {
   const {
     core = 'mihomo',
-    autoSetDNSMode = DEFAULT_DNS_MODE,
     diffWorkDir = false,
     mihomoCpuPriority = 'PRIORITY_NORMAL',
     disableLoopbackDetector = false,
@@ -168,7 +153,6 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
     safePaths = []
   } = await getAppConfig()
   const { current } = await getProfileConfig()
-  const { tun } = await getControledMihomoConfig()
 
   let corePath: string
   try {
@@ -187,17 +171,7 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
   const { logLevel } = await generateProfile()
   await checkProfile()
   await stopCore()
-  // A quit accepted during the stop has already removed the resolver.
   if (isShuttingDown()) throw new ShutdownInProgress()
-  if (tun?.enable && autoSetDNSMode !== 'none') {
-    try {
-      await setPublicDNS()
-    } catch (error) {
-      await writeFile(logPath(), `[Manager]: set dns failed, ${error}`, {
-        flag: 'a'
-      })
-    }
-  }
   const { ready } = await resetProviderTracking()
   const stdout = createWriteStream(logPath(), { flags: 'a' })
   const stderr = createWriteStream(logPath(), { flags: 'a' })
@@ -262,7 +236,7 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
     onEnd: (reason) => providerTracker.failAll(reason),
     onUpdaterFinished: async () => {
       try {
-        await stopCore(true)
+        await stopCore()
         const promises = await startCore()
         await Promise.all(promises)
       } catch (e) {
@@ -293,36 +267,25 @@ export async function startCore(detached = false): Promise<Promise<void>[]> {
   ]
 }
 
-export async function stopCore(force = false): Promise<void> {
+export async function stopCore(): Promise<void> {
   stopMihomoTraffic()
   stopMihomoConnections()
   stopMihomoLogs()
   stopMihomoMemory()
 
   // Noctur: whether the core still runs comes from its exit status (core/child-process.ts),
-  // not ChildProcess.killed, which turns true as soon as SIGINT is sent. The core gets SIGINT
-  // before the DNS restore, which has no time limit of its own: a quit that runs out of time then
-  // meets a core that already had its chance to stop (noctur/shutdown-sequence.ts).
+  // not ChildProcess.killed, which turns true as soon as SIGINT is sent.
   currentWatch?.stop()
   currentWatch = null
   providerTracker.cancelAll()
-  // The core this stop is about. While the DNS restore runs, a restart elsewhere can start a new
-  // core; only this one may be forgotten at the end.
+  // The core this stop is about. While it exits, a restart elsewhere can start a new core; only this
+  // one may be forgotten at the end.
   const target = child
   const stopping = isChildRunning(target)
     ? stopChildProcess(target, DEFAULT_STOP_TIMINGS, (line) => {
         writeFile(logPath(), line, { flag: 'a' }).catch(() => {})
       })
     : Promise.resolve()
-  try {
-    if (!force) {
-      await recoverDNS()
-    }
-  } catch (error) {
-    await writeFile(logPath(), `[Manager]: recover dns failed, ${error}`, {
-      flag: 'a'
-    }).catch(() => {})
-  }
   await stopping
   if (child === target) child = undefined as unknown as ChildProcess
 
@@ -566,60 +529,6 @@ export async function getDefaultDevice(): Promise<string> {
   device = device?.trim().split(' ').slice(1).join(' ')
   if (!device) throw new Error('Get device failed')
   return device
-}
-
-// Noctur: the DNS steps live in noctur/system-dns.ts (every network service, each original saved,
-// one default for the mode); these keep upstream's names and the retry while offline.
-// A hung resolver tool must not hold up the restart queue. It gets no execFile timeout: it runs as
-// root, and a failed kill would report the call as ended while the process still runs, which would
-// break the tool runner's order.
-const DNS_COMMAND_LIMIT_MS = 3000
-
-const runResolverTool = createDnsToolRunner(
-  (action) => promisify(execFile)(path.join(mihomoCoreDir(), 'noctur-dns'), [action]),
-  DNS_COMMAND_LIMIT_MS
-)
-
-const systemDnsDeps: DnsDeps = {
-  run: defaultRun,
-  setViaService: (service, servers) => setSysDns(service, servers),
-  runDnsTool: runResolverTool,
-  readDnsConfig: async () => {
-    const task = promisify(execFile)('/usr/sbin/scutil', ['--dns'], {
-      timeout: DNS_COMMAND_LIMIT_MS
-    })
-    return (await withinLimit(task, 'scutil --dns', DNS_COMMAND_LIMIT_MS)).stdout
-  },
-  log: async (message) => {
-    await writeFile(logPath(), `${message}\n`, { flag: 'a' })
-  },
-  getConfig: getAppConfig,
-  patchConfig: patchAppConfig
-}
-
-export async function setPublicDNS(): Promise<void> {
-  if (process.platform !== 'darwin') return
-  if (recoverDNSTimer) clearTimeout(recoverDNSTimer)
-  if (net.isOnline()) {
-    await pointDnsIntoTunnel(systemDnsDeps)
-  } else {
-    if (setPublicDNSTimer) clearTimeout(setPublicDNSTimer)
-    setPublicDNSTimer = setTimeout(() => setPublicDNS(), 5000)
-  }
-}
-
-export async function recoverDNS(retrying = false): Promise<void> {
-  if (process.platform !== 'darwin') return
-  if (setPublicDNSTimer) clearTimeout(setPublicDNSTimer)
-  if (net.isOnline()) {
-    await restoreDns(systemDnsDeps)
-  } else {
-    // Removing the resolver writes local state only, so it does not wait for the network, and a quit
-    // can end before the retry. Once is enough: the retries are for what needs the network.
-    if (!retrying) await clearResolver(systemDnsDeps)
-    if (recoverDNSTimer) clearTimeout(recoverDNSTimer)
-    recoverDNSTimer = setTimeout(() => recoverDNS(true), 5000)
-  }
 }
 
 export async function startNetworkDetection(): Promise<void> {
